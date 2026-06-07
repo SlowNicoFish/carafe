@@ -64,4 +64,5 @@ jobs:
             --version "${{ steps.version.outputs.version }}" \
             --output /tmp/release-notes.md
           gh release create "v${{ steps.version.outputs.version }}" \
+            --title "Carafe v${{ steps.version.outputs.version }}" \
             --notes-file /tmp/release-notes.md
