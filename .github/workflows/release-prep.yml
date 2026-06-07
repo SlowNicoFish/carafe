@@ -1,0 +1,39 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "New version (semver, e.g. 0.2.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Update version files
+        run: python3 .github/scripts/release-prep.py --version "${{ inputs.version }}"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: release/v${{ inputs.version }}
+          title: "chore: release v${{ inputs.version }}"
+          body: |
+            ## Release v${{ inputs.version }}
+
+            ### Changes
+            - Bump version to `${{ inputs.version }}` in CMakeLists.txt
+            - Bump version to `${{ inputs.version }}` in PKGBUILD
+            - Update CHANGELOG for v${{ inputs.version }}
+            - Update AppStream metainfo for v${{ inputs.version }}
+
+            After merging, a `v${{ inputs.version }}` tag will be created automatically.
+          commit-message: "chore: bump version to ${{ inputs.version }}"
