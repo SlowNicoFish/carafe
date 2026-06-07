@@ -32,7 +32,13 @@ def update_cmake(version: str) -> None:
 
 def update_pkgbuild(version: str) -> None:
     content = PKGBUILD_FILE.read_text()
-    content = re.sub(r"^pkgver=\d+\.\d+\.\d+", f"pkgver={version}", content, count=1, flags=re.MULTILINE)
+    content = re.sub(
+        r"^pkgver=\d+\.\d+\.\d+",
+        f"pkgver={version}",
+        content,
+        count=1,
+        flags=re.MULTILINE,
+    )
     content = re.sub(r"^pkgrel=\d+", "pkgrel=1", content, count=1, flags=re.MULTILINE)
     PKGBUILD_FILE.write_text(content)
     print(f"  PKGBUILD     -> {version}")
@@ -52,13 +58,18 @@ def update_changelog(version: str) -> list[str]:
     CHANGELOG_FILE.write_text(content)
     notes = _extract_release_notes(content, version)
     count = len(notes)
-    print(f"  CHANGELOG.md -> {version} ({today})" + (f" ({count} change{'s' if count != 1 else ''})" if count else ""))
+    print(
+        f"  CHANGELOG.md -> {version} ({today})"
+        + (f" ({count} change{'s' if count != 1 else ''})" if count else "")
+    )
     return notes
 
 
 def _extract_release_notes(content: str, version: str) -> list[str]:
     lines = content.split("\n")
-    version_heading = re.compile(r"^## \[" + re.escape(version) + r"\] - \d{4}-\d{2}-\d{2}$")
+    version_heading = re.compile(
+        r"^## \[" + re.escape(version) + r"\] - \d{4}-\d{2}-\d{2}$"
+    )
     next_heading = re.compile(r"^## ")
 
     start = None
@@ -102,7 +113,9 @@ def update_metainfo(version: str, notes: list[str]) -> None:
     label = f" ({len(notes)} change{'s' if len(notes) != 1 else ''})" if notes else ""
 
     if desc:
-        release_tag = f'  <release version="{version}" date="{today}">{desc}\n  </release>'
+        release_tag = (
+            f'  <release version="{version}" date="{today}">{desc}\n  </release>'
+        )
     else:
         release_tag = f'  <release version="{version}" date="{today}"/>'
 
@@ -112,8 +125,12 @@ def update_metainfo(version: str, notes: list[str]) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Prepare a release by bumping version strings.")
-    parser.add_argument("--version", required=True, help="New version (semver, e.g. 0.2.0)")
+    parser = argparse.ArgumentParser(
+        description="Prepare a release by bumping version strings."
+    )
+    parser.add_argument(
+        "--version", required=True, help="New version (semver, e.g. 0.2.0)"
+    )
     args = parser.parse_args()
 
     if not re.match(r"^\d+\.\d+\.\d+$", args.version):

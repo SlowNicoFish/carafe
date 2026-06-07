@@ -1,4 +1,4 @@
-# Maintainer: SlowNicoFish <marlonn.dev@proton.me>
+# Maintainer: SlowNicoFish <marlonn dot dev at proton dot me>
 
 pkgname=carafe
 pkgver=0.1.0
@@ -18,7 +18,6 @@ makedepends=(
     cmake
     ninja
     extra-cmake-modules
-    gcc
 )
 optdepends=(
     'kwallet: KDE Wallet integration for storing api keys to steamgriddb'
@@ -26,10 +25,10 @@ optdepends=(
     'umu-launcher: Launch games via UMU (Proton wrapper)'
 )
 source=("$pkgname-$pkgver.tar.gz::https://github.com/SlowNicoFish/$pkgname/archive/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('246c07834637faae6f04641545637c035cbcb50ea04ba62a89f493d32588bfc0')
 
 build() {
-    cmake -B build -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+    cmake -B build -S "$srcdir/$pkgname-$pkgver" -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
     cmake --build build
 }
 

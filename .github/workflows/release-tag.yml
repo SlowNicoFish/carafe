@@ -31,3 +31,37 @@ jobs:
         run: |
           git tag "v${{ steps.version.outputs.version }}"
           git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Update PKGBUILD checksums and .SRCINFO
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/work" \
+            -w /work \
+            archlinux:latest \
+            bash -c "
+              pacman -Syu --noconfirm base-devel devtools > /dev/null 2>&1
+              cd packaging/arch
+              updpkgsums
+              makepkg --printsrcinfo > .SRCINFO
+              rm -f -- *.tar.gz
+            "
+
+      - name: Commit packaging updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packaging/arch/PKGBUILD packaging/arch/.SRCINFO
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update packaging checksums for v${{ steps.version.outputs.version }}"
+            git push
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          .github/scripts/extract-release-notes.py \
+            --version "${{ steps.version.outputs.version }}" \
+            --output /tmp/release-notes.md
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --notes-file /tmp/release-notes.md
