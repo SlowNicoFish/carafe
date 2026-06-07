@@ -23,6 +23,7 @@
   </branding>
   <launchable type="desktop-id">io.marlonn.carafe.desktop</launchable>
   <releases>
+  <release version="0.1.0" date="2026-06-07"/>
   </releases>
   <categories>
     <category>Game</category>
