@@ -1,0 +1,32 @@
+# CMake build artifacts
+/build/
+CMakeFiles/
+/cmake-build-debug/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+/.cache/
+
+# IDE files
+.idea
+.kdev4
+
+# Qt Creator files
+*.user
+*.user.*
+*.kdev4
+.qtcreator
+Generated
+
+# Binary outputs
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.exe
+
+# Editor backup files
+*~
+*.swp
+*.swo

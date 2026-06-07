@@ -1,0 +1,38 @@
+# Maintainer: SlowNicoFish <marlonn.dev@proton.me>
+
+pkgname=carafe
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='A native KDE Plasma game launcher for Windows games via Proton/UMU'
+arch=(x86_64)
+url='https://github.com/SlowNicoFish/carafe'
+license=(MIT)
+depends=(
+    qt6-base
+    qt6-declarative
+    kirigami
+    kcoreaddons
+    hicolor-icon-theme
+)
+makedepends=(
+    cmake
+    ninja
+    extra-cmake-modules
+    gcc
+)
+optdepends=(
+    'kwallet: KDE Wallet integration for storing api keys to steamgriddb'
+    'icoutils: Windows .ico file extraction'
+    'umu-launcher: Launch games via UMU (Proton wrapper)'
+)
+source=("$pkgname-$pkgver.tar.gz::https://github.com/SlowNicoFish/$pkgname/archive/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cmake -B build -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+    cmake --build build
+}
+
+package() {
+    cmake --install build --prefix "$pkgdir"/usr
+}
