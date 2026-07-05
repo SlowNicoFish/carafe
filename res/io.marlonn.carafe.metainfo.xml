@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component type="desktop-application">
+  <id>io.marlonn.carafe</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <content_rating type="oars-1.1" />
+  <update_contact>marlonn.dev@proton.me</update_contact>
+  <url type="homepage">https://github.com/SlowNicoFish/carafe</url>
+  <url type="bugtracker">https://github.com/SlowNicoFish/carafe/issues</url>
+  <name>Carafe</name>
+  <summary>A game launcher for Windows games via Proton/UMU</summary>
+  <description>
+     <p
+        >Carafe is a native KDE Plasma desktop application designed to manage and launch Windows games through Proton and UMU.</p>
+     <ul>
+         <li>Launch games via Proton/UMU</li>
+         <li>Native KDE Plasma integration and theming</li>
+     </ul>
+  </description>
+  <branding>
+    <color type="primary" scheme_preference="light">#3465a2</color>
+    <color type="primary" scheme_preference="dark">#145ba2</color>
+  </branding>
+  <launchable type="desktop-id">io.marlonn.carafe.desktop</launchable>
+  <releases>
+  <release version="0.1.0" date="2026-07-05">
+    <description>
+      <p>Initial Release</p>
+    </description>
+  </release>
+  </releases>
+  <categories>
+    <category>Game</category>
+    <category>Launcher</category>
+  </categories>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <recommends>
+    <internet>always</internet>
+  </recommends>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+  <provides>
+    <binary>carafe</binary>
+  </provides>
+</component>

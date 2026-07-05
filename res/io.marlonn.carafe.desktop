@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Carafe
+GenericName=Game Launcher
+Exec=carafe %F
+Terminal=false
+Type=Application
+StartupNotify=true
+StartupWMClass=carafe
+Icon=io.marlonn.carafe
+Categories=Game;Launcher;
+Keywords=Game;Launcher;Proton;UMU;Steam;
+MimeType=application/x-ms-dos-executable;
