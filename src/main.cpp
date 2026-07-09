@@ -6,6 +6,7 @@
 #include "launcher.h"
 
 int main(int argc, char *argv[]) {
+  qputenv("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
   QGuiApplication app(argc, argv);
 
   app.setDesktopFileName(QStringLiteral(APP_ID));
