@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- File picker now uses xdg-file-picker, should look nicer
+
+### Fixed
+
+- Installer text should now reset color even if install fails
 
 ## [0.1.1] - 2026-07-05
 

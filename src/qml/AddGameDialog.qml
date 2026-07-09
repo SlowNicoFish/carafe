@@ -219,6 +219,7 @@ Kirigami.Dialog {
         nameFilters: ["Installers (*.exe *.msi)", "All Files (*)"]
         onAccepted: {
             installStatus.text = "Running installer…"
+            installStatus.color = Kirigami.Theme.textColor
             installBtn.enabled = false
             Backend.runInstaller(dialog.urlToPath(selectedFile),
                                  prefixField.text,
@@ -242,6 +243,7 @@ Kirigami.Dialog {
         }
         function onInstallerStarted() {
             installStatus.text = "Running installer…"
+            installStatus.color = Kirigami.Theme.textColor
             installBtn.enabled = false
         }
         function onInstallerFinished(success, message) {
