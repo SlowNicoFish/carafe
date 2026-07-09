@@ -8,6 +8,10 @@ configure type="Debug":
 build type="Debug":
     cmake --build build/{{ type }}
 
+# Run
+run type="Debug":
+    ./build/{{ type }}/bin/carafe
+
 # Install
 install type="Debug":
     cmake --install build/{{ type }}
