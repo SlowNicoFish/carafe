@@ -25,7 +25,8 @@
   <releases>
   <release version="0.1.2" date="2026-07-10">
     <description>
-      <p>TODO: fill in release notes</p>
+      <p>File picker now uses xdg-file-picker, should look nicer</p>
+      <p>Installer text should now reset color even if install fails</p>
     </description>
   </release>
   <release version="0.1.1" date="2026-07-05">
