@@ -23,6 +23,11 @@
   </branding>
   <launchable type="desktop-id">io.marlonn.carafe.desktop</launchable>
   <releases>
+  <release version="0.1.2" date="2026-07-10">
+    <description>
+      <p>TODO: fill in release notes</p>
+    </description>
+  </release>
   <release version="0.1.1" date="2026-07-05">
     <description>
       <p>None</p>

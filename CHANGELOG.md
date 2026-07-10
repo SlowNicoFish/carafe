@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+
+## [0.1.2] - 2026-07-10
+
 ### Changed
 
 - File picker now uses xdg-file-picker, should look nicer
