@@ -25,6 +25,8 @@ QVariant GameModel::data(const QModelIndex &index, int role) const {
     return g.exePath;
   case LaunchArgsRole:
     return g.launchArgs;
+  case WrapperCommandRole:
+    return g.wrapperCommand;
   case PrefixPathRole:
     return g.prefixPath;
   case ProtonVersionRole:
@@ -52,6 +54,7 @@ QHash<int, QByteArray> GameModel::roleNames() const {
       {TitleRole, "title"},
       {ExePathRole, "exePath"},
       {LaunchArgsRole, "launchArgs"},
+      {WrapperCommandRole, "wrapperCommand"},
       {PrefixPathRole, "prefixPath"},
       {ProtonVersionRole, "protonVersion"},
       {ProtonPathRole, "protonPath"},
@@ -124,6 +127,7 @@ QVariantMap GameModel::get(int row) const {
       {QStringLiteral("title"), g.title},
       {QStringLiteral("exePath"), g.exePath},
       {QStringLiteral("launchArgs"), g.launchArgs},
+      {QStringLiteral("wrapperCommand"), g.wrapperCommand},
       {QStringLiteral("prefixPath"), g.prefixPath},
       {QStringLiteral("protonVersion"), g.protonVersion},
       {QStringLiteral("protonPath"), g.protonPath},

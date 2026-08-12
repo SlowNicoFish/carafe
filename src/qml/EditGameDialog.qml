@@ -23,6 +23,7 @@ Kirigami.Dialog {
         exeField.text = game.exePath ?? "";
         prefixField.text = game.prefixPath ?? "";
         launchArgsField.text = game.launchArgs ?? "";
+        wrapperField.text = game.wrapperCommand ?? "";
         umuField.text = game.umuId ?? "";
         const idx = protonCombo.find(game.protonVersion ?? "");
         protonCombo.currentIndex = idx;
@@ -92,6 +93,12 @@ Kirigami.Dialog {
             }
 
             QQC2.TextField {
+                id: wrapperField
+                Kirigami.FormData.label: "Launch wrapper:"
+                placeholderText: "Optional, e.g. game-performance"
+            }
+
+            QQC2.TextField {
                 id: umuField
                 Kirigami.FormData.label: "UMU game ID:"
                 placeholderText: "Optional"
@@ -112,6 +119,7 @@ Kirigami.Dialog {
                     title: titleField.text.trim(),
                     exePath: exeField.text.trim(),
                     launchArgs: launchArgsField.text,
+                    wrapperCommand: wrapperField.text,
                     prefixPath: prefixField.text.trim(),
                     protonVersion: protonCombo.currentIndex >= 0 ? protonCombo.currentText : "",
                     umuId: umuField.text.trim()

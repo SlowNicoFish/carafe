@@ -7,7 +7,7 @@ struct AppSettings {
     QString defaultProton;
     QString steamgridApiKey;
     QString defaultLaunchArgs;
-    QString extraProtonPaths;   // newline-separated list
+    QString defaultWrapperCommand;
 
     static AppSettings defaults() { return {}; }
 };

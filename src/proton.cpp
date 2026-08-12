@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-QList<ProtonBuild> ProtonDetector::discoverBuilds(const QStringList &extraPaths)
+QList<ProtonBuild> ProtonDetector::discoverBuilds()
 {
     const QString home = QDir::homePath();
 
@@ -15,11 +15,6 @@ QList<ProtonBuild> ProtonDetector::discoverBuilds(const QStringList &extraPaths)
         home + QStringLiteral("/.local/share/Steam/steamapps/common"),
         QStringLiteral("/usr/share/steam/compatibilitytools.d"),
     };
-
-    for (const QString &extra : extraPaths) {
-        if (!extra.trimmed().isEmpty())
-            searchDirs.append(extra.trimmed());
-    }
 
     QList<ProtonBuild> builds;
 

@@ -13,7 +13,7 @@ Kirigami.Dialog {
         defaultProtonCombo.currentIndex = defaultProtonCombo.find(Backend.defaultProton ?? "");
         apiKeyField.text = Backend.steamgridApiKey ?? "";
         defaultArgsField.text = Backend.defaultLaunchArgs ?? "";
-        extraProtonField.text = Backend.extraProtonPaths ?? "";
+        defaultWrapperField.text = Backend.defaultWrapperCommand ?? "";
     }
 
     customFooterActions: [
@@ -25,7 +25,7 @@ Kirigami.Dialog {
                     defaultProton: defaultProtonCombo.currentIndex >= 0 ? defaultProtonCombo.currentText : "",
                     steamgridApiKey: apiKeyField.text,
                     defaultLaunchArgs: defaultArgsField.text,
-                    extraProtonPaths: extraProtonField.text
+                    defaultWrapperCommand: defaultWrapperField.text
                 });
                 dialog.close();
             }
@@ -58,13 +58,10 @@ Kirigami.Dialog {
             placeholderText: "Optional"
         }
 
-        QQC2.TextArea {
-            id: extraProtonField
-            Kirigami.FormData.label: "Extra Proton search paths:"
-            placeholderText: "One path per line"
-            Layout.fillWidth: true
-            implicitHeight: Kirigami.Units.gridUnit * 5
-            wrapMode: TextEdit.NoWrap
+        QQC2.TextField {
+            id: defaultWrapperField
+            Kirigami.FormData.label: "Default launch wrapper:"
+            placeholderText: "Optional, e.g. game-performance"
         }
     }
 }

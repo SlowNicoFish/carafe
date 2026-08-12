@@ -9,6 +9,7 @@ Kirigami.Dialog {
     id: dialog
     title: "Add Game"
     padding: Kirigami.Units.largeSpacing
+    closePolicy: QQC2.Popup.CloseOnEscape
 
     property var protonBuilds: []
     property bool prefixManuallyEdited: false
@@ -163,6 +164,12 @@ Kirigami.Dialog {
                 model: dialog.protonBuilds
                 displayText: currentIndex < 0 ? "Choose Proton version" : currentText
             }
+
+            QQC2.TextField {
+                id: wrapperField
+                Kirigami.FormData.label: "Launch wrapper:"
+                placeholderText: "Optional, e.g. game-performance"
+            }
         }
     }
 
@@ -182,7 +189,8 @@ Kirigami.Dialog {
                                 protonCombo.currentIndex >= 0 ? protonCombo.currentText : "",
                                 "",
                                 dialog._previewGridPath,
-                                dialog._previewIconPath)
+                                dialog._previewIconPath,
+                                wrapperField.text.trim())
                  dialog.close()
             }
         },

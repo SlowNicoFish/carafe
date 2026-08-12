@@ -13,6 +13,6 @@ struct ProtonBuild {
 class ProtonDetector
 {
 public:
-    static QList<ProtonBuild> discoverBuilds(const QStringList &extraPaths = {});
+    static QList<ProtonBuild> discoverBuilds();
     static QStringList buildNames(const QList<ProtonBuild> &builds);
 };

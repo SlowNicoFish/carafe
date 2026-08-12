@@ -167,9 +167,9 @@ QString Launcher::defaultLaunchArgs() const
     return m_settings.defaultLaunchArgs;
 }
 
-QString Launcher::extraProtonPaths() const
+QString Launcher::defaultWrapperCommand() const
 {
-    return m_settings.extraProtonPaths;
+    return m_settings.defaultWrapperCommand;
 }
 
 void Launcher::setSettings(const AppSettings &settings)
@@ -186,9 +186,9 @@ void Launcher::setSettings(const AppSettings &settings)
         m_settings.defaultLaunchArgs = settings.defaultLaunchArgs;
         Q_EMIT defaultLaunchArgsChanged();
     }
-    if (m_settings.extraProtonPaths != settings.extraProtonPaths) {
-        m_settings.extraProtonPaths = settings.extraProtonPaths;
-        Q_EMIT extraProtonPathsChanged();
+    if (m_settings.defaultWrapperCommand != settings.defaultWrapperCommand) {
+        m_settings.defaultWrapperCommand = settings.defaultWrapperCommand;
+        Q_EMIT defaultWrapperCommandChanged();
     }
 }
 
@@ -204,9 +204,7 @@ bool Launcher::saveLibrary() const
 
 void Launcher::reloadProtonBuilds()
 {
-    const QStringList extraPaths = m_settings.extraProtonPaths
-        .split(QRegularExpression(QStringLiteral("[\n\r]+")), Qt::SkipEmptyParts);
-    m_discoveredProtonBuilds = ProtonDetector::discoverBuilds(extraPaths);
+    m_discoveredProtonBuilds = ProtonDetector::discoverBuilds();
     m_protonBuilds = ProtonDetector::buildNames(m_discoveredProtonBuilds);
     Q_EMIT protonBuildsChanged();
 }
@@ -270,7 +268,8 @@ bool Launcher::addGame(const QString &title,
                        const QString &protonVersion,
                        const QString &umuId,
                        const QString &gridPath,
-                       const QString &iconPath)
+                       const QString &iconPath,
+                       const QString &wrapperCommand)
 {
     QString resolvedPrefix = prefixPath.trimmed();
     if (resolvedPrefix.isEmpty())
@@ -280,11 +279,12 @@ bool Launcher::addGame(const QString &title,
     if (!game.isValid())
         return false;
 
-    game.protonVersion = protonVersion.isEmpty() ? m_settings.defaultProton : protonVersion;
-    game.protonPath    = resolveProtonPath(game.protonVersion);
-    game.umuId         = umuId;
-    game.launchArgs    = m_settings.defaultLaunchArgs;
-    game.gridPath      = gridPath;
+    game.protonVersion  = protonVersion.isEmpty() ? m_settings.defaultProton : protonVersion;
+    game.protonPath     = resolveProtonPath(game.protonVersion);
+    game.umuId          = umuId;
+    game.launchArgs     = m_settings.defaultLaunchArgs;
+    game.wrapperCommand = wrapperCommand.isEmpty() ? m_settings.defaultWrapperCommand : wrapperCommand;
+    game.gridPath       = gridPath;
     game.steamgridIconPath = iconPath;
 
     m_gameModel.addGame(game);
@@ -312,6 +312,7 @@ bool Launcher::updateGame(const QString &gameId, const QVariantMap &fields)
     game.title        = fields.value(QStringLiteral("title"),        game.title).toString();
     game.exePath      = newExePath;
     game.launchArgs   = fields.value(QStringLiteral("launchArgs"),   game.launchArgs).toString();
+    game.wrapperCommand = fields.value(QStringLiteral("wrapperCommand"), game.wrapperCommand).toString();
     game.prefixPath   = fields.value(QStringLiteral("prefixPath"),   game.prefixPath).toString();
     game.protonVersion = newProtonVersion;
     game.protonPath   = resolveProtonPath(newProtonVersion);
@@ -369,6 +370,7 @@ QVariantMap Launcher::gameById(const QString &gameId) const
         {QStringLiteral("title"),              game.title},
         {QStringLiteral("exePath"),            game.exePath},
         {QStringLiteral("launchArgs"),         game.launchArgs},
+        {QStringLiteral("wrapperCommand"),     game.wrapperCommand},
         {QStringLiteral("prefixPath"),         game.prefixPath},
         {QStringLiteral("protonVersion"),      game.protonVersion},
         {QStringLiteral("protonPath"),         game.protonPath},
@@ -412,6 +414,15 @@ bool Launcher::launchGame(const QString &gameId)
     if (!game.launchArgs.trimmed().isEmpty())
         args << parseShellArgs(game.launchArgs);
 
+    QStringList wrapperTokens = parseShellArgs(game.wrapperCommand.trimmed());
+    if (!wrapperTokens.isEmpty())
+        args.prepend(QString::fromLatin1(UMU_RUN));
+
+    const QString program = wrapperTokens.isEmpty()
+        ? QString::fromLatin1(UMU_RUN)
+        : wrapperTokens.takeFirst();
+    args = wrapperTokens + args;
+
     QProcess *process = new QProcess(this);
     process->setProcessEnvironment(env);
 
@@ -423,9 +434,9 @@ bool Launcher::launchGame(const QString &gameId)
     });
 
     connect(process, &QProcess::errorOccurred, this,
-            [this, uuid, gameId](QProcess::ProcessError error) {
+            [this, uuid, gameId, program](QProcess::ProcessError error) {
         const QString msg = error == QProcess::FailedToStart
-            ? QStringLiteral("Failed to start %1. Is it installed?").arg(QString::fromLatin1(UMU_RUN))
+            ? QStringLiteral("Failed to start %1. Is it installed?").arg(program)
             : QStringLiteral("Process error: %1").arg(static_cast<int>(error));
         Q_EMIT gameLaunchFailed(gameId, msg);
         m_gameModel.setRunning(uuid, false);
@@ -440,7 +451,7 @@ bool Launcher::launchGame(const QString &gameId)
             p->deleteLater();
     });
 
-    process->start(QString::fromLatin1(UMU_RUN), args);
+    process->start(program, args);
     return true;
 }
 
@@ -519,14 +530,24 @@ void Launcher::runInstaller(const QString &installerPath,
 
     process->setProcessEnvironment(env);
 
+    QStringList wrapperTokens = parseShellArgs(m_settings.defaultWrapperCommand.trimmed());
+    QStringList args = {installerPath};
+    if (!wrapperTokens.isEmpty())
+        args.prepend(QString::fromLatin1(UMU_RUN));
+
+    const QString program = wrapperTokens.isEmpty()
+        ? QString::fromLatin1(UMU_RUN)
+        : wrapperTokens.takeFirst();
+    args = wrapperTokens + args;
+
     connect(process, &QProcess::started, this, [this]() {
         Q_EMIT installerStarted();
     });
 
     connect(process, &QProcess::errorOccurred, this,
-            [this, process](QProcess::ProcessError error) {
+            [this, process, program](QProcess::ProcessError error) {
         const QString msg = error == QProcess::FailedToStart
-            ? QStringLiteral("Failed to start %1. Is it installed?").arg(QString::fromLatin1(UMU_RUN))
+            ? QStringLiteral("Failed to start %1. Is it installed?").arg(program)
             : QStringLiteral("Process error: %1").arg(static_cast<int>(error));
         Q_EMIT installerFinished(false, msg);
         process->deleteLater();
@@ -541,7 +562,7 @@ void Launcher::runInstaller(const QString &installerPath,
         process->deleteLater();
     });
 
-    process->start(QString::fromLatin1(UMU_RUN), {installerPath});
+    process->start(program, args);
 }
 
 void Launcher::runExeInPrefix(const QString &gameId, const QString &exePath)
@@ -573,10 +594,20 @@ void Launcher::runExeInPrefix(const QString &gameId, const QString &exePath)
 
     process->setProcessEnvironment(env);
 
+    QStringList wrapperTokens = parseShellArgs(game.wrapperCommand.trimmed());
+    QStringList args = {exePath};
+    if (!wrapperTokens.isEmpty())
+        args.prepend(QString::fromLatin1(UMU_RUN));
+
+    const QString program = wrapperTokens.isEmpty()
+        ? QString::fromLatin1(UMU_RUN)
+        : wrapperTokens.takeFirst();
+    args = wrapperTokens + args;
+
     connect(process, &QProcess::errorOccurred, this,
-            [this, process](QProcess::ProcessError error) {
+            [this, process, program](QProcess::ProcessError error) {
         const QString msg = error == QProcess::FailedToStart
-            ? QStringLiteral("Failed to start %1. Is it installed?").arg(QString::fromLatin1(UMU_RUN))
+            ? QStringLiteral("Failed to start %1. Is it installed?").arg(program)
             : QStringLiteral("Process error: %1").arg(static_cast<int>(error));
         Q_EMIT runExeInPrefixFinished(false, msg);
         process->deleteLater();
@@ -591,16 +622,16 @@ void Launcher::runExeInPrefix(const QString &gameId, const QString &exePath)
         process->deleteLater();
     });
 
-    process->start(QString::fromLatin1(UMU_RUN), {exePath});
+    process->start(program, args);
 }
 
 bool Launcher::saveSettings(const QVariantMap &settings)
 {
     AppSettings s;
-    s.defaultProton     = settings.value(QStringLiteral("defaultProton")).toString();
-    s.steamgridApiKey   = settings.value(QStringLiteral("steamgridApiKey")).toString();
-    s.defaultLaunchArgs = settings.value(QStringLiteral("defaultLaunchArgs")).toString();
-    s.extraProtonPaths  = settings.value(QStringLiteral("extraProtonPaths")).toString();
+    s.defaultProton         = settings.value(QStringLiteral("defaultProton")).toString();
+    s.steamgridApiKey       = settings.value(QStringLiteral("steamgridApiKey")).toString();
+    s.defaultLaunchArgs     = settings.value(QStringLiteral("defaultLaunchArgs")).toString();
+    s.defaultWrapperCommand = settings.value(QStringLiteral("defaultWrapperCommand")).toString();
 
     if (!m_settingsStore.save(s))
         return false;

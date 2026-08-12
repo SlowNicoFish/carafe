@@ -17,6 +17,7 @@ QJsonObject Game::toJson() const
     obj[QStringLiteral("title")]             = title;
     obj[QStringLiteral("exePath")]           = exePath;
     obj[QStringLiteral("launchArgs")]        = launchArgs;
+    obj[QStringLiteral("wrapperCommand")]    = wrapperCommand;
     obj[QStringLiteral("prefixPath")]        = prefixPath;
     obj[QStringLiteral("protonVersion")]     = protonVersion;
     // protonPath is intentionally not persisted, it is always re-resolved
@@ -35,6 +36,7 @@ Game Game::fromJson(const QJsonObject &obj)
     g.title            = obj[QStringLiteral("title")].toString();
     g.exePath          = obj[QStringLiteral("exePath")].toString();
     g.launchArgs       = obj[QStringLiteral("launchArgs")].toString();
+    g.wrapperCommand   = obj[QStringLiteral("wrapperCommand")].toString();
     g.prefixPath       = obj[QStringLiteral("prefixPath")].toString();
     g.protonVersion    = obj[QStringLiteral("protonVersion")].toString();
     // protonPath is left empty here; Launcher resolves it after loading.

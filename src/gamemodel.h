@@ -20,6 +20,7 @@ public:
     TitleRole,
     ExePathRole,
     LaunchArgsRole,
+    WrapperCommandRole,
     PrefixPathRole,
     ProtonVersionRole,
     ProtonPathRole,

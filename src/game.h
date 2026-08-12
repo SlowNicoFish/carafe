@@ -9,6 +9,7 @@ struct Game {
     QString title;
     QString exePath;
     QString launchArgs;
+    QString wrapperCommand;
     QString prefixPath;
     QString protonVersion;
     QString protonPath;

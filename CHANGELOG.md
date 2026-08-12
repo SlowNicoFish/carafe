@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Launch wrapper support (e.g. `game-performance`, `gamemoderun`) with a global default in Settings and a per-game override in Add/Edit Game. Wrappers apply to game launches, installers, and "Run exe in prefix".
+
+### Changed
+
+- AddGameDialog does not close when clicking the empty space around it anymore.
+
+### Removed
+
+- The "Extra Proton search paths" setting. Proton builds are now only discovered in the standard locations.
 
 ## [0.1.2] - 2026-07-10
 

@@ -19,7 +19,7 @@ class Launcher : public QObject
     Q_PROPERTY(QString defaultProton READ defaultProton NOTIFY defaultProtonChanged)
     Q_PROPERTY(QString steamgridApiKey READ steamgridApiKey NOTIFY steamgridApiKeyChanged)
     Q_PROPERTY(QString defaultLaunchArgs READ defaultLaunchArgs NOTIFY defaultLaunchArgsChanged)
-    Q_PROPERTY(QString extraProtonPaths READ extraProtonPaths NOTIFY extraProtonPathsChanged)
+    Q_PROPERTY(QString defaultWrapperCommand READ defaultWrapperCommand NOTIFY defaultWrapperCommandChanged)
 
 public:
     explicit Launcher(QObject *parent = nullptr);
@@ -30,7 +30,7 @@ public:
     QString      defaultProton() const;
     QString      steamgridApiKey() const;
     QString      defaultLaunchArgs() const;
-    QString      extraProtonPaths() const;
+    QString      defaultWrapperCommand() const;
 
     Q_INVOKABLE static QString urlToLocalFile(const QUrl &url);
     Q_INVOKABLE void loadLibrary();
@@ -43,7 +43,8 @@ public:
                              const QString &protonVersion,
                              const QString &umuId,
                              const QString &gridPath = {},
-                             const QString &iconPath = {});
+                             const QString &iconPath = {},
+                             const QString &wrapperCommand = {});
     Q_INVOKABLE bool updateGame(const QString &gameId, const QVariantMap &fields);
     Q_INVOKABLE bool removeGame(const QString &gameId, bool removePrefix = false);
     Q_INVOKABLE QVariantMap gameById(const QString &gameId) const;
@@ -63,7 +64,7 @@ Q_SIGNALS:
     void defaultProtonChanged();
     void steamgridApiKeyChanged();
     void defaultLaunchArgsChanged();
-    void extraProtonPathsChanged();
+    void defaultWrapperCommandChanged();
     void toastMessage(const QString &message);
     void gridPreviewReady(const QString &gameName, const QString &path);
     void iconPreviewReady(const QString &gameName, const QString &path);

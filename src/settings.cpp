@@ -83,9 +83,9 @@ AppSettings SettingsStore::load()
     }
 
     AppSettings s;
-    s.defaultProton     = obj[QStringLiteral("defaultProton")].toString();
-    s.defaultLaunchArgs = obj[QStringLiteral("defaultLaunchArgs")].toString();
-    s.extraProtonPaths  = obj[QStringLiteral("extraProtonPaths")].toString();
+    s.defaultProton         = obj[QStringLiteral("defaultProton")].toString();
+    s.defaultLaunchArgs     = obj[QStringLiteral("defaultLaunchArgs")].toString();
+    s.defaultWrapperCommand = obj[QStringLiteral("defaultWrapperCommand")].toString();
 
 #ifdef HAVE_KWALLET
     KWallet::Wallet *wallet = openWallet();
@@ -110,9 +110,9 @@ bool SettingsStore::save(const AppSettings &s) const
     QDir().mkpath(QFileInfo(path).absolutePath());
 
     QJsonObject obj;
-    obj[QStringLiteral("defaultProton")]     = s.defaultProton;
-    obj[QStringLiteral("defaultLaunchArgs")] = s.defaultLaunchArgs;
-    obj[QStringLiteral("extraProtonPaths")]  = s.extraProtonPaths;
+    obj[QStringLiteral("defaultProton")]         = s.defaultProton;
+    obj[QStringLiteral("defaultLaunchArgs")]     = s.defaultLaunchArgs;
+    obj[QStringLiteral("defaultWrapperCommand")] = s.defaultWrapperCommand;
 
 #ifdef HAVE_KWALLET
     KWallet::Wallet *wallet = openWallet();
