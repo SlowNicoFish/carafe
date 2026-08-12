@@ -6,7 +6,7 @@ configure type="Debug":
 
 # Build
 build type="Debug":
-    cmake --build build/{{ type }}
+    cmake --build build/{{ type }} --parallel
 
 # Run
 run type="Debug":
