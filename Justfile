@@ -10,6 +10,13 @@ build type="Debug":
 
 # Run
 run type="Debug":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if [ ! -x "./build/{{ type }}/bin/carafe" ] || find CMakeLists.txt src res -type f -newer "./build/{{ type }}/bin/carafe" | grep -q .; then
+        just build {{ type }}
+    fi
+
     ./build/{{ type }}/bin/carafe
 
 # Install
