@@ -10,7 +10,6 @@ Item {
 
     property string gameId: ""
     property string title: ""
-    property string subtitle: ""
     property string iconSource: ""
     property bool isRunning: false
 

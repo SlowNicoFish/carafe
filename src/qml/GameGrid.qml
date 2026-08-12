@@ -11,9 +11,7 @@ Item {
     signal launchRequested(string gameId)
     signal fetchArtworkRequested(string gameId)
     signal runExeInPrefixRequested(string gameId)
-
-    // Target card width; actual width fills evenly across available space.
-    readonly property int targetCardWidth: 280
+    readonly property int targetCardWidth: 220
     readonly property int columns: Math.max(1, Math.floor(width / targetCardWidth))
     readonly property int cellW: Math.floor(width / columns)
     readonly property int cellH: Math.round(cellW * 1.5)
@@ -31,8 +29,8 @@ Item {
             gameId: model.gameId
             title: model.title
             iconSource: {
-                const p = model.gridPath;
-                return p ? "file://" + p : "";
+                const p = model.gridPath
+                return p ? Backend.localFileToUrl(p) : "qrc:/res/carafe_placeholder.png";
             }
             launchArgs: model.launchArgs
             prefixPath: model.prefixPath

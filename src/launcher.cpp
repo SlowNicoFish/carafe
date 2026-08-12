@@ -73,6 +73,11 @@ QString Launcher::urlToLocalFile(const QUrl &url)
     return url.toLocalFile();
 }
 
+QUrl Launcher::localFileToUrl(const QString &path)
+{
+    return QUrl::fromLocalFile(path);
+}
+
 Launcher::Launcher(QObject *parent)
     : QObject(parent)
     , m_gameModel(this)
@@ -259,7 +264,12 @@ static QString slugify(const QString &title)
 QString Launcher::suggestPrefix(const QString &title) const
 {
     const QString slug = slugify(title.trimmed());
-    return QDir::homePath() + QStringLiteral("/carafe/prefixes/") + slug;
+    const QString base = QDir::homePath() + QStringLiteral("/carafe/prefixes/") + slug;
+    QString path = base;
+    int suffix = 2;
+    while (QDir(path).exists())
+        path = base + QStringLiteral("_%1").arg(suffix++);
+    return path;
 }
 
 bool Launcher::addGame(const QString &title,
@@ -307,7 +317,7 @@ bool Launcher::updateGame(const QString &gameId, const QVariantMap &fields)
 
     const QString newExePath      = fields.value(QStringLiteral("exePath"), game.exePath).toString();
     const QString newProtonVersion = fields.value(QStringLiteral("protonVersion"), game.protonVersion).toString();
-    const bool exeChanged = (game.exePath != newExePath) || game.iconPath.isEmpty();
+    const bool exeChanged = (game.exePath != newExePath);
 
     game.title        = fields.value(QStringLiteral("title"),        game.title).toString();
     game.exePath      = newExePath;
@@ -457,6 +467,8 @@ bool Launcher::launchGame(const QString &gameId)
 
 void Launcher::fetchGrid(const QString &gameId, const QString &apiKey)
 {
+    if (apiKey.trimmed().isEmpty())
+        return;
     const QUuid uuid(gameId);
     if (uuid.isNull())
         return;
@@ -467,6 +479,8 @@ void Launcher::fetchGrid(const QString &gameId, const QString &apiKey)
 
 void Launcher::fetchIcon(const QString &gameId, const QString &apiKey)
 {
+    if (apiKey.trimmed().isEmpty())
+        return;
     const QUuid uuid(gameId);
     if (uuid.isNull())
         return;
@@ -545,21 +559,23 @@ void Launcher::runInstaller(const QString &installerPath,
     });
 
     connect(process, &QProcess::errorOccurred, this,
-            [this, process, program](QProcess::ProcessError error) {
+            [this, process = QPointer<QProcess>(process), program](QProcess::ProcessError error) {
         const QString msg = error == QProcess::FailedToStart
             ? QStringLiteral("Failed to start %1. Is it installed?").arg(program)
             : QStringLiteral("Process error: %1").arg(static_cast<int>(error));
         Q_EMIT installerFinished(false, msg);
-        process->deleteLater();
+        if (process)
+            process->deleteLater();
     });
 
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-            [this, process](int exitCode, QProcess::ExitStatus status) {
+            [this, process = QPointer<QProcess>(process)](int exitCode, QProcess::ExitStatus status) {
         const bool ok = (status == QProcess::NormalExit && exitCode == 0);
         Q_EMIT installerFinished(ok,
             ok ? QStringLiteral("Installer finished successfully.")
                : QStringLiteral("Installer exited with code %1.").arg(exitCode));
-        process->deleteLater();
+        if (process)
+            process->deleteLater();
     });
 
     process->start(program, args);
@@ -605,21 +621,23 @@ void Launcher::runExeInPrefix(const QString &gameId, const QString &exePath)
     args = wrapperTokens + args;
 
     connect(process, &QProcess::errorOccurred, this,
-            [this, process, program](QProcess::ProcessError error) {
+            [this, process = QPointer<QProcess>(process), program](QProcess::ProcessError error) {
         const QString msg = error == QProcess::FailedToStart
             ? QStringLiteral("Failed to start %1. Is it installed?").arg(program)
             : QStringLiteral("Process error: %1").arg(static_cast<int>(error));
         Q_EMIT runExeInPrefixFinished(false, msg);
-        process->deleteLater();
+        if (process)
+            process->deleteLater();
     });
 
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-            [this, process](int exitCode, QProcess::ExitStatus status) {
+            [this, process = QPointer<QProcess>(process)](int exitCode, QProcess::ExitStatus status) {
         const bool ok = (status == QProcess::NormalExit && exitCode == 0);
         Q_EMIT runExeInPrefixFinished(ok,
             ok ? QStringLiteral("Executable finished successfully.")
                : QStringLiteral("Executable exited with code %1.").arg(exitCode));
-        process->deleteLater();
+        if (process)
+            process->deleteLater();
     });
 
     process->start(program, args);

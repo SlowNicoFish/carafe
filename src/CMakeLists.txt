@@ -18,6 +18,11 @@ qt_add_executable(carafe
     icoextract.cpp
 )
 
+qt_add_resources(carafe
+    PREFIX /res
+    FILES ../res/carafe_placeholder.png
+)
+
 target_compile_definitions(carafe PRIVATE
     APP_ID="${APP_ID}"
     APP_VERSION="${PROJECT_VERSION}"

@@ -25,7 +25,13 @@ QList<Game> Storage::loadLibrary() const
     if (!f.open(QIODevice::ReadOnly))
         return {};
 
-    const QJsonDocument doc = QJsonDocument::fromJson(f.readAll());
+    const QByteArray raw = f.readAll();
+    QJsonParseError parseError;
+    const QJsonDocument doc = QJsonDocument::fromJson(raw, &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        qWarning() << "Failed to parse library file:" << parseError.errorString();
+        return {};
+    }
     if (!doc.isArray())
         return {};
 

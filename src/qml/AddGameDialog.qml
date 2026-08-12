@@ -90,7 +90,7 @@ Kirigami.Dialog {
                 spacing: Kirigami.Units.largeSpacing
 
                 Image {
-                    source: _previewGridPath.length > 0 ? "file://" + _previewGridPath : ""
+                    source: _previewGridPath.length > 0 ? Backend.localFileToUrl(_previewGridPath) : ""
                     visible: _previewGridPath.length > 0
                     fillMode: Image.PreserveAspectFit
                     Layout.preferredHeight: 100
@@ -98,7 +98,7 @@ Kirigami.Dialog {
                 }
 
                 Image {
-                    source: _previewIconPath.length > 0 ? "file://" + _previewIconPath : ""
+                    source: _previewIconPath.length > 0 ? Backend.localFileToUrl(_previewIconPath) : ""
                     visible: _previewIconPath.length > 0
                     fillMode: Image.PreserveAspectFit
                     Layout.preferredHeight: 100
@@ -248,6 +248,14 @@ Kirigami.Dialog {
                 dialog._previewIconPath = path;
                 dialog._fetchingArtwork = false;
             }
+        }
+        // Reset the fetching state if either artwork fetch fails so the
+        // "Fetch Artwork" button doesn't get permanently stuck disabled.
+        function onGridError(gameId, error) {
+            dialog._fetchingArtwork = false;
+        }
+        function onIconError(gameId, error) {
+            dialog._fetchingArtwork = false;
         }
         function onInstallerStarted() {
             installStatus.text = "Running installer…"

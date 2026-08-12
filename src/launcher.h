@@ -33,6 +33,7 @@ public:
     QString      defaultWrapperCommand() const;
 
     Q_INVOKABLE static QString urlToLocalFile(const QUrl &url);
+    Q_INVOKABLE static QUrl   localFileToUrl(const QString &path);
     Q_INVOKABLE void loadLibrary();
     Q_INVOKABLE bool saveLibrary() const;
     Q_INVOKABLE void reloadProtonBuilds();

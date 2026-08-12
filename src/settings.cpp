@@ -77,8 +77,11 @@ AppSettings SettingsStore::load()
     QFile f(settingsPath());
     QJsonObject obj;
     if (f.open(QIODevice::ReadOnly)) {
-        const QJsonDocument doc = QJsonDocument::fromJson(f.readAll());
-        if (doc.isObject())
+        QJsonParseError parseError;
+        const QJsonDocument doc = QJsonDocument::fromJson(f.readAll(), &parseError);
+        if (parseError.error != QJsonParseError::NoError)
+            qWarning() << "Failed to parse settings file:" << parseError.errorString();
+        else if (doc.isObject())
             obj = doc.object();
     }
 

@@ -207,7 +207,11 @@ void SteamGrid::onImageReply(QNetworkReply *reply,
         return;
     }
     f.write(data);
-    f.commit();
+    if (!f.commit()) {
+        const QString err = QStringLiteral("Failed to write image to disk: %1").arg(path);
+        isIcon ? Q_EMIT iconError(gameId, err) : Q_EMIT gridError(gameId, err);
+        return;
+    }
 
     isIcon ? Q_EMIT iconFetched(gameId, path) : Q_EMIT gridFetched(gameId, path);
 }

@@ -121,22 +121,12 @@ QVariantMap GameModel::get(int row) const {
   if (row < 0 || row >= m_games.size())
     return {};
 
-  const Game &g = m_games.at(row);
-  return {
-      {QStringLiteral("gameId"), g.id.toString(QUuid::WithoutBraces)},
-      {QStringLiteral("title"), g.title},
-      {QStringLiteral("exePath"), g.exePath},
-      {QStringLiteral("launchArgs"), g.launchArgs},
-      {QStringLiteral("wrapperCommand"), g.wrapperCommand},
-      {QStringLiteral("prefixPath"), g.prefixPath},
-      {QStringLiteral("protonVersion"), g.protonVersion},
-      {QStringLiteral("protonPath"), g.protonPath},
-      {QStringLiteral("umuId"), g.umuId},
-      {QStringLiteral("iconPath"), g.iconPath},
-      {QStringLiteral("gridPath"), g.gridPath},
-      {QStringLiteral("steamgridIconPath"), g.steamgridIconPath},
-      {QStringLiteral("isRunning"), m_running.contains(g.id)},
-  };
+  const QModelIndex idx = index(row);
+  const auto roles = roleNames();
+  QVariantMap map;
+  for (auto it = roles.cbegin(); it != roles.cend(); ++it)
+    map.insert(QString::fromUtf8(it.value()), data(idx, it.key()));
+  return map;
 }
 
 int GameModel::indexOfId(const QUuid &id) const {

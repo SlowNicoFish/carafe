@@ -126,6 +126,11 @@ Kirigami.Dialog {
                 });
                 dialog.close();
             }
+        },
+        Kirigami.Action {
+            text: "Cancel"
+            icon.name: "dialog-cancel"
+            onTriggered: dialog.close()
         }
     ]
 

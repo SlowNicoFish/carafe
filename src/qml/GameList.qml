@@ -24,7 +24,7 @@ Item {
             title:      model.title
             iconSource: {
                 const p = model.steamgridIconPath || model.iconPath
-                return p ? "file://" + p : ""
+                return p ? Backend.localFileToUrl(p) : ""
             }
             isRunning:  model.isRunning
             onLaunchRequested:       root.launchRequested(model.gameId)

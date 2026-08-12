@@ -39,53 +39,79 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: Kirigami.Units.cornerRadius
+        radius: Kirigami.Units.largeSpacing * 0.9
         color: Kirigami.Theme.backgroundColor
         border.width: 1
-        border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.15)
+        border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
 
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: Kirigami.Units.largeSpacing
-            spacing: Kirigami.Units.largeSpacing
+            spacing: Kirigami.Units.smallSpacing
 
-            Image {
-                source: cardRoot.iconSource !== "" ? cardRoot.iconSource : "qrc:/res/icons/hicolor/scalable/apps/io.marlonn.carafe.svg"
-                fillMode: cardRoot.iconSource !== "" ? Image.PreserveAspectCrop : Image.PreserveAspectFit
+            Rectangle {
+                radius: Kirigami.Units.largeSpacing * 0.9
                 clip: true
+                color: "transparent"
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.round(cardRoot.height * 0.85)
-                sourceSize.width: 460
-                sourceSize.height: 460
+                Layout.fillHeight: true
+                Layout.minimumHeight: 120
+
+                Image {
+                    anchors.fill: parent
+                    source: cardRoot.iconSource !== "" ? cardRoot.iconSource : "qrc:/res/icons/hicolor/scalable/apps/io.marlonn.carafe.svg"
+                    fillMode: cardRoot.iconSource !== "" ? Image.PreserveAspectCrop : Image.PreserveAspectFit
+                    sourceSize.width: 600
+                    sourceSize.height: 900
+                    smooth: true
+                }
             }
 
-            Item {
-                Layout.fillHeight: true
+            QQC2.Label {
+                text: cardRoot.title
+                Layout.fillWidth: true
+                Layout.maximumHeight: 42
+                Layout.minimumHeight: 20
+                wrapMode: Text.WordWrap
+                maximumLineCount: 2
+                elide: Text.ElideRight
+                horizontalAlignment: Text.AlignLeft
+                color: Kirigami.Theme.textColor
+                font.pointSize: Kirigami.Theme.defaultFont.pointSize
             }
 
             RowLayout {
                 spacing: Kirigami.Units.smallSpacing
                 Layout.fillWidth: true
+                Layout.minimumHeight: 32
+                Layout.maximumHeight: 32
 
                 QQC2.Button {
                     text: cardRoot.isRunning ? "Running" : "Launch"
                     enabled: !cardRoot.isRunning
                     icon.name: "media-playback-start"
                     Layout.fillWidth: true
+                    Layout.minimumHeight: 32
                     onClicked: cardRoot.launchRequested()
                 }
                 QQC2.Button {
                     icon.name: "document-edit"
                     display: QQC2.AbstractButton.IconOnly
+                    Layout.minimumWidth: 32
+                    Layout.minimumHeight: 32
                     QQC2.ToolTip.text: "Edit"
                     QQC2.ToolTip.visible: hovered
+                    QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
                     onClicked: cardRoot.editRequested()
                 }
                 QQC2.Button {
                     icon.name: "edit-delete"
                     display: QQC2.AbstractButton.IconOnly
+                    Layout.minimumWidth: 32
+                    Layout.minimumHeight: 32
                     QQC2.ToolTip.text: "Remove"
                     QQC2.ToolTip.visible: hovered
+                    QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
                     onClicked: cardRoot.deleteRequested()
                 }
             }
