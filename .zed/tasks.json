@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Build",
+    "command": "just configure && just build",
+    "reveal": "always",
+    "tags": ["build"]
+  },
+  {
+    "label": "Run",
+    "command": "just run",
+    "reveal": "always"
+  },
+  {
+    "label": "Clean",
+    "command": "just clean",
+    "reveal": "always"
+  }
+]
