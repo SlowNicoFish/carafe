@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-08-17
+
 ### Added
 
 - Launch wrapper support (e.g. `game-performance`, `gamemoderun`) with a global default in Settings and a per-game override in Add/Edit Game. Wrappers apply to game launches, installers, and "Run exe in prefix".
