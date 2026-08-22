@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 import io.marlonn.carafe.backend
@@ -8,6 +7,8 @@ Kirigami.Dialog {
     id: dialog
     title: "Settings"
     padding: Kirigami.Units.largeSpacing
+
+    property bool revealApiKey: false
 
     onOpened: {
         defaultProtonCombo.currentIndex = defaultProtonCombo.find(Backend.defaultProton ?? "");
@@ -49,7 +50,19 @@ Kirigami.Dialog {
             id: apiKeyField
             Kirigami.FormData.label: "SteamGridDB API key:"
             placeholderText: "Paste your API key here"
-            echoMode: TextInput.Password
+            echoMode: dialog.revealApiKey ? TextInput.Normal : TextInput.Password
+            rightPadding: revealButton.width + Kirigami.Units.smallSpacing
+
+            QQC2.ToolButton {
+                id: revealButton
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                icon.name: dialog.revealApiKey ? "password-show-off" : "password-show-on"
+                onClicked: dialog.revealApiKey = !dialog.revealApiKey
+                QQC2.ToolTip.text: dialog.revealApiKey ? "Hide API key" : "Show API key"
+                QQC2.ToolTip.visible: hovered
+                QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+            }
         }
 
         QQC2.TextField {

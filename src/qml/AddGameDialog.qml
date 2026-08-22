@@ -35,6 +35,7 @@ Kirigami.Dialog {
             ? protonCombo.find(defaultProton)
             : -1;
         installStatus.text = ""
+        wrapperField.text = ""
         titleField.forceActiveFocus()
     }
 

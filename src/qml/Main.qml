@@ -1,4 +1,5 @@
 import QtQuick
+import QtCore
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import QtQuick.Dialogs
@@ -11,8 +12,18 @@ Kirigami.ApplicationWindow {
     visible: true
     width: 1200
     height: 820
+    minimumWidth: 640
+    minimumHeight: 480
     title: "Carafe"
-    property string viewMode: "grid"
+
+    Settings {
+        id: uiSettings
+        category: "ui"
+        property string viewMode: "grid"
+    }
+
+    property string viewMode: uiSettings.viewMode
+    onViewModeChanged: uiSettings.viewMode = viewMode
 
     function fetchArtwork(gameId) {
         const apiKey = Backend.steamgridApiKey;
@@ -144,6 +155,7 @@ Kirigami.ApplicationWindow {
             },
             Kirigami.Action {
                 text: "Remove Only"
+                icon.name: "list-remove"
                 onTriggered: {
                     Backend.removeGame(removeGameDialog.gameId, false);
                     removeGameDialog.close();
@@ -228,6 +240,7 @@ Kirigami.ApplicationWindow {
             text = item.msg;
             _isError = item.isError;
             visible = true;
+            hideTimer.interval = _isError ? 8000 : 4000;
             hideTimer.restart();
         }
 

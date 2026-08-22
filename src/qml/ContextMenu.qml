@@ -12,10 +12,12 @@ QQC2.Menu {
 
     QQC2.MenuItem {
         text: "Launch"
+        icon.name: "media-playback-start"
         onTriggered: contextMenu.launchRequested()
     }
     QQC2.MenuItem {
         text: "Edit"
+        icon.name: "document-edit"
         onTriggered: contextMenu.editRequested()
     }
     QQC2.MenuItem {
@@ -29,7 +31,8 @@ QQC2.Menu {
         onTriggered: contextMenu.runExeRequested()
     }
     QQC2.MenuItem {
-        text: "Delete"
+        text: "Remove"
+        icon.name: "edit-delete"
         onTriggered: contextMenu.deleteRequested()
     }
 }

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import org.kde.kirigami as Kirigami
 import io.marlonn.carafe.backend
 
@@ -12,11 +13,36 @@ Item {
     signal fetchArtworkRequested(string gameId)
     signal runExeInPrefixRequested(string gameId)
 
+    Kirigami.PlaceholderMessage {
+        anchors.centerIn: parent
+        width: parent.width - Kirigami.Units.largeSpacing * 4
+        visible: Backend.gameModel.count === 0
+        icon.name: "applications-games"
+        text: "No games yet"
+        explanation: "Add your first game with the + button in the header."
+    }
+
     ListView {
+        id: listView
         anchors.fill: parent
         model: Backend.gameModel
         spacing: Kirigami.Units.smallSpacing
         clip: true
+        focus: true
+        keyNavigationEnabled: true
+
+        Keys.onReturnPressed: {
+            const item = currentItem as GameListItem
+            if (item)
+                root.launchRequested(item.gameId)
+        }
+        Keys.onEnterPressed: {
+            const item = currentItem as GameListItem
+            if (item)
+                root.launchRequested(item.gameId)
+        }
+
+        ScrollBar.vertical: ScrollBar { }
 
         delegate: GameListItem {
             width: ListView.view.width

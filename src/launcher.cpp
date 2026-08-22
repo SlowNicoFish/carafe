@@ -434,7 +434,8 @@ bool Launcher::launchGame(const QString &gameId)
     }
 
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    env.insert(QStringLiteral("GAMEID"),     game.umuId.isEmpty() ? game.title : game.umuId);
+    if (!game.umuId.isEmpty())
+        env.insert(QStringLiteral("GAMEID"), game.umuId);
     env.insert(QStringLiteral("WINEPREFIX"), game.prefixPath);
     if (!game.protonPath.isEmpty())
         env.insert(QStringLiteral("PROTONPATH"), game.protonPath);
@@ -625,7 +626,8 @@ void Launcher::runExeInPrefix(const QString &gameId, const QString &exePath)
     auto *process = new QProcess(this);
 
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    env.insert(QStringLiteral("GAMEID"),     game.umuId.isEmpty() ? game.title : game.umuId);
+    if (!game.umuId.isEmpty())
+        env.insert(QStringLiteral("GAMEID"), game.umuId);
     env.insert(QStringLiteral("WINEPREFIX"), game.prefixPath);
     if (!game.protonPath.isEmpty())
         env.insert(QStringLiteral("PROTONPATH"), game.protonPath);
