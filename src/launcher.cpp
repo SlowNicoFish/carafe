@@ -3,6 +3,7 @@
 
 #include <QDir>
 #include <QPointer>
+#include <QTimer>
 #include <QUrl>
 #include <QtConcurrent>
 
@@ -84,7 +85,7 @@ Launcher::Launcher(QObject *parent)
     , m_storage(this)
     , m_settingsStore(this)
     , m_steamGrid(this)
-    , m_settings(m_settingsStore.load())
+    , m_settings(m_settingsStore.loadBasic())
 {
     auto handleGridResult = [this](const QUuid &gameId, const QString &path) {
         auto it = m_previewRequests.find(gameId);
@@ -119,14 +120,24 @@ Launcher::Launcher(QObject *parent)
     };
 
     auto handleGridError = [this](const QUuid &gameId, const QString &error) {
-        if (m_previewRequests.remove(gameId))
+        auto it = m_previewRequests.find(gameId);
+        if (it != m_previewRequests.end()) {
+            const QString name = it.value();
+            m_previewRequests.erase(it);
+            Q_EMIT gridPreviewFailed(name, error);
             return;
+        }
         Q_EMIT toastMessage(QStringLiteral("Grid art: %1").arg(error));
     };
 
     auto handleIconError = [this](const QUuid &gameId, const QString &error) {
-        if (m_previewRequests.remove(gameId))
+        auto it = m_previewRequests.find(gameId);
+        if (it != m_previewRequests.end()) {
+            const QString name = it.value();
+            m_previewRequests.erase(it);
+            Q_EMIT iconPreviewFailed(name, error);
             return;
+        }
         Q_EMIT toastMessage(QStringLiteral("Icon: %1").arg(error));
     };
 
@@ -162,8 +173,13 @@ QString Launcher::defaultProton() const
     return m_settings.defaultProton;
 }
 
-QString Launcher::steamgridApiKey() const
+QString Launcher::steamgridApiKey()
 {
+    // Deferred so a slow or missing keyring cannot delay startup.
+    if (!m_apiKeyLoaded) {
+        m_apiKeyLoaded = true;
+        m_settings.steamgridApiKey = SettingsStore::loadApiKey(m_settings.steamgridApiKey);
+    }
     return m_settings.steamgridApiKey;
 }
 
@@ -348,10 +364,12 @@ bool Launcher::removeGame(const QString &gameId, bool removePrefix)
     const Game game = m_gameModel.gameById(uuid);
 
     if (QProcess *process = m_runningGames.take(uuid)) {
+        connect(process, &QProcess::finished, process, &QProcess::deleteLater);
         process->terminate();
-        if (!process->waitForFinished(3000))
-            process->kill();
-        process->deleteLater();
+        QTimer::singleShot(1500, process, [process] {
+            if (process->state() != QProcess::NotRunning)
+                process->kill();
+        });
     }
 
     m_gameModel.removeGame(uuid);
@@ -410,8 +428,10 @@ bool Launcher::launchGame(const QString &gameId)
         return false;
     }
 
-    if (m_runningGames.contains(uuid))
+    if (m_runningGames.contains(uuid)) {
+        Q_EMIT gameLaunchFailed(gameId, QStringLiteral("Game is already running."));
         return false;
+    }
 
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
     env.insert(QStringLiteral("GAMEID"),     game.umuId.isEmpty() ? game.title : game.umuId);
@@ -449,6 +469,8 @@ bool Launcher::launchGame(const QString &gameId)
             ? QStringLiteral("Failed to start %1. Is it installed?").arg(program)
             : QStringLiteral("Process error: %1").arg(static_cast<int>(error));
         Q_EMIT gameLaunchFailed(gameId, msg);
+        if (error != QProcess::FailedToStart)
+            return;
         m_gameModel.setRunning(uuid, false);
         if (QProcess *p = m_runningGames.take(uuid))
             p->deleteLater();
@@ -491,24 +513,24 @@ void Launcher::fetchIcon(const QString &gameId, const QString &apiKey)
 
 void Launcher::fetchGridArtwork(const QString &gameName)
 {
-    if (m_settings.steamgridApiKey.isEmpty()) {
+    if (steamgridApiKey().isEmpty()) {
         Q_EMIT toastMessage(QStringLiteral("Set a SteamGridDB API key in Settings first."));
         return;
     }
     const QUuid id = QUuid::createUuid();
     m_previewRequests.insert(id, gameName);
-    m_steamGrid.fetchGrid(gameName, id, m_settings.steamgridApiKey);
+    m_steamGrid.fetchGrid(gameName, id, steamgridApiKey());
 }
 
 void Launcher::fetchIconArtwork(const QString &gameName)
 {
-    if (m_settings.steamgridApiKey.isEmpty()) {
+    if (steamgridApiKey().isEmpty()) {
         Q_EMIT toastMessage(QStringLiteral("Set a SteamGridDB API key in Settings first."));
         return;
     }
     const QUuid id = QUuid::createUuid();
     m_previewRequests.insert(id, gameName);
-    m_steamGrid.fetchIcon(gameName, id, m_settings.steamgridApiKey);
+    m_steamGrid.fetchIcon(gameName, id, steamgridApiKey());
 }
 
 void Launcher::runInstaller(const QString &installerPath,
@@ -564,7 +586,7 @@ void Launcher::runInstaller(const QString &installerPath,
             ? QStringLiteral("Failed to start %1. Is it installed?").arg(program)
             : QStringLiteral("Process error: %1").arg(static_cast<int>(error));
         Q_EMIT installerFinished(false, msg);
-        if (process)
+        if (error == QProcess::FailedToStart && process)
             process->deleteLater();
     });
 
@@ -626,7 +648,7 @@ void Launcher::runExeInPrefix(const QString &gameId, const QString &exePath)
             ? QStringLiteral("Failed to start %1. Is it installed?").arg(program)
             : QStringLiteral("Process error: %1").arg(static_cast<int>(error));
         Q_EMIT runExeInPrefixFinished(false, msg);
-        if (process)
+        if (error == QProcess::FailedToStart && process)
             process->deleteLater();
     });
 

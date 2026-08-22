@@ -1,5 +1,6 @@
 #include "storage.h"
 
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -19,6 +20,22 @@ QString Storage::libraryPath()
     return dir + QStringLiteral("/library.json");
 }
 
+// Renames a corrupt library file out of the way so the next save cannot
+// silently destroy whatever data it still contained.
+void Storage::quarantineLibrary() const
+{
+    const QString path = libraryPath();
+    if (!QFile::exists(path))
+        return;
+
+    const QString backup = path + QStringLiteral(".corrupt-%1")
+                               .arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss")));
+    if (QFile::rename(path, backup))
+        qWarning() << "Quarantined corrupt library file to" << backup;
+    else
+        qWarning() << "Could not quarantine corrupt library file:" << path;
+}
+
 QList<Game> Storage::loadLibrary() const
 {
     QFile f(libraryPath());
@@ -30,10 +47,14 @@ QList<Game> Storage::loadLibrary() const
     const QJsonDocument doc = QJsonDocument::fromJson(raw, &parseError);
     if (parseError.error != QJsonParseError::NoError) {
         qWarning() << "Failed to parse library file:" << parseError.errorString();
+        quarantineLibrary();
         return {};
     }
-    if (!doc.isArray())
+    if (!doc.isArray()) {
+        qWarning() << "Library file does not contain a JSON array.";
+        quarantineLibrary();
         return {};
+    }
 
     QList<Game> games;
     for (const QJsonValue &val : doc.array()) {

@@ -28,7 +28,7 @@ public:
     GameModel   *gameModel();
     QStringList  protonBuilds() const;
     QString      defaultProton() const;
-    QString      steamgridApiKey() const;
+    QString      steamgridApiKey();
     QString      defaultLaunchArgs() const;
     QString      defaultWrapperCommand() const;
 
@@ -69,6 +69,8 @@ Q_SIGNALS:
     void toastMessage(const QString &message);
     void gridPreviewReady(const QString &gameName, const QString &path);
     void iconPreviewReady(const QString &gameName, const QString &path);
+    void gridPreviewFailed(const QString &gameName, const QString &error);
+    void iconPreviewFailed(const QString &gameName, const QString &error);
     void gameLaunchFailed(const QString &gameId, const QString &reason);
     void installerStarted();
     void installerFinished(bool success, const QString &message);
@@ -84,6 +86,7 @@ private:
     SettingsStore       m_settingsStore;
     SteamGrid           m_steamGrid;
     AppSettings         m_settings;
+    bool                m_apiKeyLoaded = false;
     QStringList         m_protonBuilds;
     QList<ProtonBuild>  m_discoveredProtonBuilds;
     QMap<QUuid, QProcess*>  m_runningGames;

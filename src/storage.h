@@ -21,4 +21,5 @@ public:
 
 private:
     static QString libraryPath();
+    void quarantineLibrary() const;
 };

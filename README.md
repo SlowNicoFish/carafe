@@ -18,7 +18,7 @@ Dependencies: CMake 4.3+, Clang, `openmp` (LLVM OpenMP runtime, required by Kiri
 #### Arch Deps
 
 ```bash
-sudo pacman -S --needed openmp cmake extra-cmake-modules umu-launcher ninja icoutils
+sudo pacman -S --needed openmp cmake extra-cmake-modules umu-launcher ninja icoutils just vulkan-headers
 ```
 
 This project supports a `just` workflow for debug/release configuration, building, and installing.

@@ -57,6 +57,7 @@ private:
                        const QString  &suffix,
                        bool            isIcon);
     void onImageReply(QNetworkReply *reply,
+                      const QString &imageUrl,
                       const QUuid   &gameId,
                       const QString &suffix,
                       bool           isIcon);

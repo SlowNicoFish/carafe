@@ -72,7 +72,7 @@ bool SettingsStore::keyringAvailable()
 #endif
 }
 
-AppSettings SettingsStore::load()
+AppSettings SettingsStore::loadBasic()
 {
     QFile f(settingsPath());
     QJsonObject obj;
@@ -89,22 +89,26 @@ AppSettings SettingsStore::load()
     s.defaultProton         = obj[QStringLiteral("defaultProton")].toString();
     s.defaultLaunchArgs     = obj[QStringLiteral("defaultLaunchArgs")].toString();
     s.defaultWrapperCommand = obj[QStringLiteral("defaultWrapperCommand")].toString();
-
-#ifdef HAVE_KWALLET
-    KWallet::Wallet *wallet = openWallet();
-    if (wallet) {
-        s.steamgridApiKey = readKeyFromWallet(wallet);
-        if (s.steamgridApiKey.isEmpty())
-            s.steamgridApiKey = obj[QStringLiteral("steamgridApiKey")].toString();
-        delete wallet;
-    } else {
-        s.steamgridApiKey = obj[QStringLiteral("steamgridApiKey")].toString();
-    }
-#else
-    s.steamgridApiKey   = obj[QStringLiteral("steamgridApiKey")].toString();
-#endif
+    // Kept as the fallback for loadApiKey() when no keyring is available.
+    s.steamgridApiKey       = obj[QStringLiteral("steamgridApiKey")].toString();
 
     return s;
+}
+
+QString SettingsStore::loadApiKey(const QString &jsonFallback)
+{
+#ifdef HAVE_KWALLET
+    if (hasWallet()) {
+        KWallet::Wallet *wallet = openWallet();
+        if (wallet) {
+            const QString key = readKeyFromWallet(wallet);
+            delete wallet;
+            if (!key.isEmpty())
+                return key;
+        }
+    }
+#endif
+    return jsonFallback;
 }
 
 bool SettingsStore::save(const AppSettings &s) const

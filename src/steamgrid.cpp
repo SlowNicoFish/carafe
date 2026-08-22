@@ -1,6 +1,7 @@
 #include "steamgrid.h"
 
 #include <QDir>
+#include <QFileInfo>
 #include <QSaveFile>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -8,9 +9,31 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QStandardPaths>
+#include <QUrl>
 #include <QUrlQuery>
 
 static constexpr auto API_BASE = "https://www.steamgriddb.com/api/v2";
+
+static QStringList allowedImageExtensions()
+{
+    return {QStringLiteral("png"), QStringLiteral("jpg"),
+            QStringLiteral("jpeg"), QStringLiteral("webp")};
+}
+
+static QString describeReplyError(QNetworkReply *reply)
+{
+    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    if (status < 400)
+        return reply->errorString();
+
+    // Prefer the API's own JSON error message (e.g. invalid API key) when present.
+    QString detail;
+    const QJsonObject obj = QJsonDocument::fromJson(reply->readAll()).object();
+    const QString message = obj.value(QStringLiteral("message")).toString();
+    if (!message.isEmpty())
+        detail = QStringLiteral(" — %1").arg(message);
+    return QStringLiteral("HTTP %1%2").arg(status).arg(detail);
+}
 
 SteamGrid::SteamGrid(QObject *parent)
     : QObject(parent)
@@ -76,7 +99,7 @@ void SteamGrid::onSearchReply(QNetworkReply   *reply,
     reply->deleteLater();
 
     if (reply->error() != QNetworkReply::NoError) {
-        const QString err = QStringLiteral("Search failed: %1").arg(reply->errorString());
+        const QString err = QStringLiteral("Search failed: %1").arg(describeReplyError(reply));
         isIcon ? Q_EMIT iconError(gameId, err) : Q_EMIT gridError(gameId, err);
         return;
     }
@@ -135,7 +158,7 @@ void SteamGrid::onAssetListReply(QNetworkReply *reply,
 
     if (reply->error() != QNetworkReply::NoError) {
         const QString err = QStringLiteral("Asset request failed: %1")
-                                .arg(reply->errorString());
+                                .arg(describeReplyError(reply));
         isIcon ? Q_EMIT iconError(gameId, err) : Q_EMIT gridError(gameId, err);
         return;
     }
@@ -166,12 +189,13 @@ void SteamGrid::downloadAsset(const QString  &imageUrl,
 
     QNetworkReply *reply = m_nam->get(req);
     connect(reply, &QNetworkReply::finished, this,
-            [this, reply, gameId, suffix, isIcon]() {
-        onImageReply(reply, gameId, suffix, isIcon);
+            [this, reply, imageUrl, gameId, suffix, isIcon]() {
+        onImageReply(reply, imageUrl, gameId, suffix, isIcon);
     });
 }
 
 void SteamGrid::onImageReply(QNetworkReply *reply,
+                              const QString &imageUrl,
                               const QUuid   &gameId,
                               const QString &suffix,
                               bool           isIcon)
@@ -180,7 +204,7 @@ void SteamGrid::onImageReply(QNetworkReply *reply,
 
     if (reply->error() != QNetworkReply::NoError) {
         const QString err = QStringLiteral("Image download failed: %1")
-                                .arg(reply->errorString());
+                                .arg(describeReplyError(reply));
         isIcon ? Q_EMIT iconError(gameId, err) : Q_EMIT gridError(gameId, err);
         return;
     }
@@ -197,8 +221,12 @@ void SteamGrid::onImageReply(QNetworkReply *reply,
     const QString dir = assetDir();
     QDir().mkpath(dir);
 
-    const QString path = dir + QStringLiteral("/%1_%2.png")
-                             .arg(gameId.toString(QUuid::WithoutBraces), suffix);
+    QString extension = QFileInfo(QUrl(imageUrl).path()).suffix().toLower();
+    if (!allowedImageExtensions().contains(extension))
+        extension = QStringLiteral("png");
+
+    const QString path = dir + QStringLiteral("/%1_%2.%3")
+                             .arg(gameId.toString(QUuid::WithoutBraces), suffix, extension);
 
     QSaveFile f(path);
     if (!f.open(QIODevice::WriteOnly)) {

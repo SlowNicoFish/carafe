@@ -32,7 +32,7 @@ Item {
             spacing: Kirigami.Units.largeSpacing
 
             Image {
-                source: listItemRoot.iconSource !== "" ? listItemRoot.iconSource : "qrc:/res/icons/hicolor/scalable/apps/io.marlonn.carafe.svg"
+                source: listItemRoot.iconSource !== "" ? listItemRoot.iconSource : "qrc:/res/carafe_placeholder.png"
                 Layout.preferredWidth: Kirigami.Units.iconSizes.huge
                 Layout.preferredHeight: Kirigami.Units.iconSizes.huge
                 fillMode: Image.PreserveAspectFit

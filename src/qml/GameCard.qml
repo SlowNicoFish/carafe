@@ -59,7 +59,7 @@ Item {
 
                 Image {
                     anchors.fill: parent
-                    source: cardRoot.iconSource !== "" ? cardRoot.iconSource : "qrc:/res/icons/hicolor/scalable/apps/io.marlonn.carafe.svg"
+                    source: cardRoot.iconSource !== "" ? cardRoot.iconSource : "qrc:/res/carafe_placeholder.png"
                     fillMode: cardRoot.iconSource !== "" ? Image.PreserveAspectCrop : Image.PreserveAspectFit
                     sourceSize.width: 600
                     sourceSize.height: 900

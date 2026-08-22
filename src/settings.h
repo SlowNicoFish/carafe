@@ -29,7 +29,10 @@ class SettingsStore : public QObject
 public:
     explicit SettingsStore(QObject *parent = nullptr);
 
-    static AppSettings load();
+    /** Fast JSON-only load; never touches the keyring. */
+    static AppSettings loadBasic();
+    /** Reads the SteamGridDB API key from the keyring (may block briefly). */
+    static QString loadApiKey(const QString &jsonFallback);
     bool        save(const AppSettings &settings) const;
 
     /** Returns true when the system keyring is usable at run time. */

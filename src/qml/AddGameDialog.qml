@@ -14,6 +14,7 @@ Kirigami.Dialog {
     property var protonBuilds: []
     property bool prefixManuallyEdited: false
     property bool _fetchingArtwork: false
+    property string _pendingFetchTitle: ""
     property string _previewGridPath: ""
     property string _previewIconPath: ""
 
@@ -26,6 +27,7 @@ Kirigami.Dialog {
         prefixField.text = ""
         prefixManuallyEdited = false
         _fetchingArtwork = false
+        _pendingFetchTitle = ""
         _previewGridPath = ""
         _previewIconPath = ""
         const defaultProton = Backend.defaultProton ?? "";
@@ -75,6 +77,7 @@ Kirigami.Dialog {
                     enabled: titleField.text.trim().length > 0 && !_fetchingArtwork
                     onClicked: {
                         const title = titleField.text.trim();
+                        dialog._pendingFetchTitle = title;
                         _previewGridPath = "";
                         _previewIconPath = "";
                         _fetchingArtwork = true;
@@ -180,6 +183,7 @@ Kirigami.Dialog {
             icon.name: "list-add"
             onTriggered: {
                 if (titleField.text.trim() === "" || exeField.text.trim() === "") {
+                    validationMessage.text = "Game name and executable path are required."
                     validationMessage.visible = true
                     return
                 }
@@ -238,24 +242,28 @@ Kirigami.Dialog {
     Connections {
         target: Backend
         function onGridPreviewReady(gameName, path) {
-            if (gameName === titleField.text.trim()) {
+            dialog._fetchingArtwork = false;
+            if (gameName === dialog._pendingFetchTitle)
                 dialog._previewGridPath = path;
-                dialog._fetchingArtwork = false;
-            }
         }
         function onIconPreviewReady(gameName, path) {
-            if (gameName === titleField.text.trim()) {
+            dialog._fetchingArtwork = false;
+            if (gameName === dialog._pendingFetchTitle)
                 dialog._previewIconPath = path;
-                dialog._fetchingArtwork = false;
+        }
+        function onGridPreviewFailed(gameName, error) {
+            dialog._fetchingArtwork = false;
+            if (gameName === dialog._pendingFetchTitle) {
+                validationMessage.text = error
+                validationMessage.visible = true
             }
         }
-        // Reset the fetching state if either artwork fetch fails so the
-        // "Fetch Artwork" button doesn't get permanently stuck disabled.
-        function onGridError(gameId, error) {
+        function onIconPreviewFailed(gameName, error) {
             dialog._fetchingArtwork = false;
-        }
-        function onIconError(gameId, error) {
-            dialog._fetchingArtwork = false;
+            if (gameName === dialog._pendingFetchTitle) {
+                validationMessage.text = error
+                validationMessage.visible = true
+            }
         }
         function onInstallerStarted() {
             installStatus.text = "Running installer…"
@@ -269,7 +277,7 @@ Kirigami.Dialog {
                 ? Kirigami.Theme.positiveTextColor
                 : Kirigami.Theme.negativeTextColor
             if (success)
-                exeDialog.currentFolder = "file://" + prefixField.text
+                exeDialog.currentFolder = Backend.localFileToUrl(prefixField.text)
         }
     }
 }
