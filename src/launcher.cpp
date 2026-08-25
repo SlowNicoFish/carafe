@@ -6,6 +6,7 @@
 #include <QTimer>
 #include <QUrl>
 #include <QtConcurrent>
+using namespace Qt::Literals::StringLiterals;
 
 static constexpr auto UMU_RUN = "umu-run";
 
@@ -84,9 +85,8 @@ Launcher::Launcher(QObject *parent)
     , m_gameModel(this)
     , m_storage(this)
     , m_settingsStore(this)
-    , m_steamGrid(this)
-    , m_settings(m_settingsStore.loadBasic())
-{
+    , m_steamGrid(this) {
+    setSettings(m_settingsStore.loadBasic());
     auto handleGridResult = [this](const QUuid &gameId, const QString &path) {
         auto it = m_previewRequests.find(gameId);
         if (it != m_previewRequests.end()) {
@@ -127,7 +127,7 @@ Launcher::Launcher(QObject *parent)
             Q_EMIT gridPreviewFailed(name, error);
             return;
         }
-        Q_EMIT toastMessage(QStringLiteral("Grid art: %1").arg(error));
+        Q_EMIT toastMessage(u"Grid art: %1"_s.arg(error));
     };
 
     auto handleIconError = [this](const QUuid &gameId, const QString &error) {
@@ -138,7 +138,7 @@ Launcher::Launcher(QObject *parent)
             Q_EMIT iconPreviewFailed(name, error);
             return;
         }
-        Q_EMIT toastMessage(QStringLiteral("Icon: %1").arg(error));
+        Q_EMIT toastMessage(u"Icon: %1"_s.arg(error));
     };
 
     connect(&m_steamGrid, &SteamGrid::gridFetched, this, handleGridResult);
@@ -170,7 +170,7 @@ QStringList Launcher::protonBuilds() const
 
 QString Launcher::defaultProton() const
 {
-    return m_settings.defaultProton;
+    return m_defaultProton;
 }
 
 QString Launcher::steamgridApiKey()
@@ -178,39 +178,28 @@ QString Launcher::steamgridApiKey()
     // Deferred so a slow or missing keyring cannot delay startup.
     if (!m_apiKeyLoaded) {
         m_apiKeyLoaded = true;
-        m_settings.steamgridApiKey = SettingsStore::loadApiKey(m_settings.steamgridApiKey);
+        m_steamgridApiKey = SettingsStore::loadApiKey(m_steamgridApiKey);
     }
-    return m_settings.steamgridApiKey;
+    return m_steamgridApiKey;
 }
 
 QString Launcher::defaultLaunchArgs() const
 {
-    return m_settings.defaultLaunchArgs;
+    return m_defaultLaunchArgs;
 }
 
 QString Launcher::defaultWrapperCommand() const
 {
-    return m_settings.defaultWrapperCommand;
+    return m_defaultWrapperCommand;
 }
 
 void Launcher::setSettings(const AppSettings &settings)
 {
-    if (m_settings.defaultProton != settings.defaultProton) {
-        m_settings.defaultProton = settings.defaultProton;
-        Q_EMIT defaultProtonChanged();
-    }
-    if (m_settings.steamgridApiKey != settings.steamgridApiKey) {
-        m_settings.steamgridApiKey = settings.steamgridApiKey;
-        Q_EMIT steamgridApiKeyChanged();
-    }
-    if (m_settings.defaultLaunchArgs != settings.defaultLaunchArgs) {
-        m_settings.defaultLaunchArgs = settings.defaultLaunchArgs;
-        Q_EMIT defaultLaunchArgsChanged();
-    }
-    if (m_settings.defaultWrapperCommand != settings.defaultWrapperCommand) {
-        m_settings.defaultWrapperCommand = settings.defaultWrapperCommand;
-        Q_EMIT defaultWrapperCommandChanged();
-    }
+    // Assignments emit the matching NOTIFY signals only on actual changes.
+    m_defaultProton = settings.defaultProton;
+    m_steamgridApiKey = settings.steamgridApiKey;
+    m_defaultLaunchArgs = settings.defaultLaunchArgs;
+    m_defaultWrapperCommand = settings.defaultWrapperCommand;
 }
 
 void Launcher::loadLibrary()
@@ -227,7 +216,6 @@ void Launcher::reloadProtonBuilds()
 {
     m_discoveredProtonBuilds = ProtonDetector::discoverBuilds();
     m_protonBuilds = ProtonDetector::buildNames(m_discoveredProtonBuilds);
-    Q_EMIT protonBuildsChanged();
 }
 
 QString Launcher::resolveProtonPath(const QString &versionName) const
@@ -273,18 +261,18 @@ static QString slugify(const QString &title)
     if (slug.endsWith(QLatin1Char('_')))
         slug.chop(1);
     if (slug.isEmpty())
-        slug = QStringLiteral("game");
+        slug = u"game"_s;
     return slug;
 }
 
 QString Launcher::suggestPrefix(const QString &title) const
 {
     const QString slug = slugify(title.trimmed());
-    const QString base = QDir::homePath() + QStringLiteral("/carafe/prefixes/") + slug;
+    const QString base = QDir::homePath() + u"/carafe/prefixes/"_s + slug;
     QString path = base;
     int suffix = 2;
     while (QDir(path).exists())
-        path = base + QStringLiteral("_%1").arg(suffix++);
+        path = base + u"_%1"_s.arg(suffix++);
     return path;
 }
 
@@ -305,11 +293,11 @@ bool Launcher::addGame(const QString &title,
     if (!game.isValid())
         return false;
 
-    game.protonVersion  = protonVersion.isEmpty() ? m_settings.defaultProton : protonVersion;
+    game.protonVersion = protonVersion.isEmpty() ? defaultProton() : protonVersion;
     game.protonPath     = resolveProtonPath(game.protonVersion);
     game.umuId          = umuId;
-    game.launchArgs     = m_settings.defaultLaunchArgs;
-    game.wrapperCommand = wrapperCommand.isEmpty() ? m_settings.defaultWrapperCommand : wrapperCommand;
+    game.launchArgs = defaultLaunchArgs();
+    game.wrapperCommand = wrapperCommand.isEmpty() ? defaultWrapperCommand() : wrapperCommand;
     game.gridPath       = gridPath;
     game.steamgridIconPath = iconPath;
 
@@ -331,21 +319,21 @@ bool Launcher::updateGame(const QString &gameId, const QVariantMap &fields)
     if (!game.isValid())
         return false;
 
-    const QString newExePath      = fields.value(QStringLiteral("exePath"), game.exePath).toString();
-    const QString newProtonVersion = fields.value(QStringLiteral("protonVersion"), game.protonVersion).toString();
+    const QString newExePath = fields.value(u"exePath"_s, game.exePath).toString();
+    const QString newProtonVersion = fields.value(u"protonVersion"_s, game.protonVersion).toString();
     const bool exeChanged = (game.exePath != newExePath);
 
-    game.title        = fields.value(QStringLiteral("title"),        game.title).toString();
+    game.title = fields.value(u"title"_s, game.title).toString();
     game.exePath      = newExePath;
-    game.launchArgs   = fields.value(QStringLiteral("launchArgs"),   game.launchArgs).toString();
-    game.wrapperCommand = fields.value(QStringLiteral("wrapperCommand"), game.wrapperCommand).toString();
-    game.prefixPath   = fields.value(QStringLiteral("prefixPath"),   game.prefixPath).toString();
+    game.launchArgs = fields.value(u"launchArgs"_s, game.launchArgs).toString();
+    game.wrapperCommand = fields.value(u"wrapperCommand"_s, game.wrapperCommand).toString();
+    game.prefixPath = fields.value(u"prefixPath"_s, game.prefixPath).toString();
     game.protonVersion = newProtonVersion;
     game.protonPath   = resolveProtonPath(newProtonVersion);
-    game.umuId        = fields.value(QStringLiteral("umuId"),        game.umuId).toString();
-    game.iconPath     = fields.value(QStringLiteral("iconPath"),     game.iconPath).toString();
-    game.gridPath     = fields.value(QStringLiteral("gridPath"),     game.gridPath).toString();
-    game.steamgridIconPath = fields.value(QStringLiteral("steamgridIconPath"), game.steamgridIconPath).toString();
+    game.umuId = fields.value(u"umuId"_s, game.umuId).toString();
+    game.iconPath = fields.value(u"iconPath"_s, game.iconPath).toString();
+    game.gridPath = fields.value(u"gridPath"_s, game.gridPath).toString();
+    game.steamgridIconPath = fields.value(u"steamgridIconPath"_s, game.steamgridIconPath).toString();
 
     m_gameModel.updateGame(game);
 
@@ -394,18 +382,18 @@ QVariantMap Launcher::gameById(const QString &gameId) const
         return {};
 
     return QVariantMap{
-        {QStringLiteral("gameId"),             game.id.toString(QUuid::WithoutBraces)},
-        {QStringLiteral("title"),              game.title},
-        {QStringLiteral("exePath"),            game.exePath},
-        {QStringLiteral("launchArgs"),         game.launchArgs},
-        {QStringLiteral("wrapperCommand"),     game.wrapperCommand},
-        {QStringLiteral("prefixPath"),         game.prefixPath},
-        {QStringLiteral("protonVersion"),      game.protonVersion},
-        {QStringLiteral("protonPath"),         game.protonPath},
-        {QStringLiteral("umuId"),              game.umuId},
-        {QStringLiteral("iconPath"),           game.iconPath},
-        {QStringLiteral("gridPath"),           game.gridPath},
-        {QStringLiteral("steamgridIconPath"),  game.steamgridIconPath},
+        {u"gameId"_s, game.id.toString(QUuid::WithoutBraces)},
+        {u"title"_s, game.title},
+        {u"exePath"_s, game.exePath},
+        {u"launchArgs"_s, game.launchArgs},
+        {u"wrapperCommand"_s, game.wrapperCommand},
+        {u"prefixPath"_s, game.prefixPath},
+        {u"protonVersion"_s, game.protonVersion},
+        {u"protonPath"_s, game.protonPath},
+        {u"umuId"_s, game.umuId},
+        {u"iconPath"_s, game.iconPath},
+        {u"gridPath"_s, game.gridPath},
+        {u"steamgridIconPath"_s, game.steamgridIconPath},
     };
 }
 
@@ -413,32 +401,32 @@ bool Launcher::launchGame(const QString &gameId)
 {
     const QUuid uuid(gameId);
     if (uuid.isNull()) {
-        Q_EMIT gameLaunchFailed(gameId, QStringLiteral("Invalid game identifier."));
+        Q_EMIT gameLaunchFailed(gameId, u"Invalid game identifier."_s);
         return false;
     }
 
     const Game game = m_gameModel.gameById(uuid);
     if (!game.isValid()) {
-        Q_EMIT gameLaunchFailed(gameId, QStringLiteral("Game not found."));
+        Q_EMIT gameLaunchFailed(gameId, u"Game not found."_s);
         return false;
     }
 
     if (game.exePath.isEmpty()) {
-        Q_EMIT gameLaunchFailed(gameId, QStringLiteral("No executable configured for this game."));
+        Q_EMIT gameLaunchFailed(gameId, u"No executable configured for this game."_s);
         return false;
     }
 
     if (m_runningGames.contains(uuid)) {
-        Q_EMIT gameLaunchFailed(gameId, QStringLiteral("Game is already running."));
+        Q_EMIT gameLaunchFailed(gameId, u"Game is already running."_s);
         return false;
     }
 
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
     if (!game.umuId.isEmpty())
-        env.insert(QStringLiteral("GAMEID"), game.umuId);
-    env.insert(QStringLiteral("WINEPREFIX"), game.prefixPath);
+        env.insert(u"GAMEID"_s, game.umuId);
+    env.insert(u"WINEPREFIX"_s, game.prefixPath);
     if (!game.protonPath.isEmpty())
-        env.insert(QStringLiteral("PROTONPATH"), game.protonPath);
+        env.insert(u"PROTONPATH"_s, game.protonPath);
 
     QStringList args;
     args << game.exePath;
@@ -464,11 +452,9 @@ bool Launcher::launchGame(const QString &gameId)
         m_gameModel.setRunning(uuid, true);
     });
 
-    connect(process, &QProcess::errorOccurred, this,
-            [this, uuid, gameId, program](QProcess::ProcessError error) {
-        const QString msg = error == QProcess::FailedToStart
-            ? QStringLiteral("Failed to start %1. Is it installed?").arg(program)
-            : QStringLiteral("Process error: %1").arg(static_cast<int>(error));
+    connect(process, &QProcess::errorOccurred, this, [this, uuid, gameId, program](QProcess::ProcessError error) {
+        const QString msg = error == QProcess::FailedToStart ? u"Failed to start %1. Is it installed?"_s.arg(program)
+                                                             : u"Process error: %1"_s.arg(static_cast<int>(error));
         Q_EMIT gameLaunchFailed(gameId, msg);
         if (error != QProcess::FailedToStart)
             return;
@@ -515,7 +501,7 @@ void Launcher::fetchIcon(const QString &gameId, const QString &apiKey)
 void Launcher::fetchGridArtwork(const QString &gameName)
 {
     if (steamgridApiKey().isEmpty()) {
-        Q_EMIT toastMessage(QStringLiteral("Set a SteamGridDB API key in Settings first."));
+        Q_EMIT toastMessage(u"Set a SteamGridDB API key in Settings first."_s);
         return;
     }
     const QUuid id = QUuid::createUuid();
@@ -526,7 +512,7 @@ void Launcher::fetchGridArtwork(const QString &gameName)
 void Launcher::fetchIconArtwork(const QString &gameName)
 {
     if (steamgridApiKey().isEmpty()) {
-        Q_EMIT toastMessage(QStringLiteral("Set a SteamGridDB API key in Settings first."));
+        Q_EMIT toastMessage(u"Set a SteamGridDB API key in Settings first."_s);
         return;
     }
     const QUuid id = QUuid::createUuid();
@@ -539,35 +525,35 @@ void Launcher::runInstaller(const QString &installerPath,
                              const QString &protonVersion)
 {
     if (installerPath.isEmpty()) {
-        Q_EMIT installerFinished(false, QStringLiteral("No installer path specified."));
+        Q_EMIT installerFinished(false, u"No installer path specified."_s);
         return;
     }
 
     // Ensure the prefix directory exists before launching
     const QString resolvedPrefix = prefixPath.trimmed();
     if (resolvedPrefix.isEmpty()) {
-        Q_EMIT installerFinished(false, QStringLiteral("A Wine prefix path is required to run the installer."));
+        Q_EMIT installerFinished(false, u"A Wine prefix path is required to run the installer."_s);
         return;
     }
     QDir prefixDir(resolvedPrefix);
-    if (!prefixDir.exists() && !prefixDir.mkpath(QStringLiteral("."))) {
-        Q_EMIT installerFinished(false, QStringLiteral("Could not create Wine prefix directory: %1").arg(resolvedPrefix));
+    if (!prefixDir.exists() && !prefixDir.mkpath(u"."_s)) {
+        Q_EMIT installerFinished(false, u"Could not create Wine prefix directory: %1"_s.arg(resolvedPrefix));
         return;
     }
 
     auto *process = new QProcess(this);
 
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    env.insert(QStringLiteral("GAMEID"),     QStringLiteral("carafe-installer"));
-    env.insert(QStringLiteral("WINEPREFIX"), resolvedPrefix);
+    env.insert(u"GAMEID"_s, u"carafe-installer"_s);
+    env.insert(u"WINEPREFIX"_s, resolvedPrefix);
 
     const QString resolved = resolveProtonPath(protonVersion);
     if (!resolved.isEmpty())
-        env.insert(QStringLiteral("PROTONPATH"), resolved);
+        env.insert(u"PROTONPATH"_s, resolved);
 
     process->setProcessEnvironment(env);
 
-    QStringList wrapperTokens = parseShellArgs(m_settings.defaultWrapperCommand.trimmed());
+    QStringList wrapperTokens = parseShellArgs(defaultWrapperCommand().trimmed());
     QStringList args = {installerPath};
     if (!wrapperTokens.isEmpty())
         args.prepend(QString::fromLatin1(UMU_RUN));
@@ -583,20 +569,19 @@ void Launcher::runInstaller(const QString &installerPath,
 
     connect(process, &QProcess::errorOccurred, this,
             [this, process = QPointer<QProcess>(process), program](QProcess::ProcessError error) {
-        const QString msg = error == QProcess::FailedToStart
-            ? QStringLiteral("Failed to start %1. Is it installed?").arg(program)
-            : QStringLiteral("Process error: %1").arg(static_cast<int>(error));
-        Q_EMIT installerFinished(false, msg);
-        if (error == QProcess::FailedToStart && process)
-            process->deleteLater();
-    });
+                const QString msg = error == QProcess::FailedToStart
+                                        ? u"Failed to start %1. Is it installed?"_s.arg(program)
+                                        : u"Process error: %1"_s.arg(static_cast<int>(error));
+                Q_EMIT installerFinished(false, msg);
+                if (error == QProcess::FailedToStart && process)
+                    process->deleteLater();
+            });
 
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
             [this, process = QPointer<QProcess>(process)](int exitCode, QProcess::ExitStatus status) {
         const bool ok = (status == QProcess::NormalExit && exitCode == 0);
-        Q_EMIT installerFinished(ok,
-            ok ? QStringLiteral("Installer finished successfully.")
-               : QStringLiteral("Installer exited with code %1.").arg(exitCode));
+        Q_EMIT installerFinished(ok, ok ? u"Installer finished successfully."_s
+                                        : u"Installer exited with code %1."_s.arg(exitCode));
         if (process)
             process->deleteLater();
     });
@@ -607,19 +592,19 @@ void Launcher::runInstaller(const QString &installerPath,
 void Launcher::runExeInPrefix(const QString &gameId, const QString &exePath)
 {
     if (exePath.isEmpty()) {
-        Q_EMIT runExeInPrefixFinished(false, QStringLiteral("No executable path specified."));
+        Q_EMIT runExeInPrefixFinished(false, u"No executable path specified."_s);
         return;
     }
 
     const QUuid uuid(gameId);
     if (uuid.isNull()) {
-        Q_EMIT runExeInPrefixFinished(false, QStringLiteral("Invalid game identifier."));
+        Q_EMIT runExeInPrefixFinished(false, u"Invalid game identifier."_s);
         return;
     }
 
     const Game game = m_gameModel.gameById(uuid);
     if (!game.isValid()) {
-        Q_EMIT runExeInPrefixFinished(false, QStringLiteral("Game not found."));
+        Q_EMIT runExeInPrefixFinished(false, u"Game not found."_s);
         return;
     }
 
@@ -627,10 +612,10 @@ void Launcher::runExeInPrefix(const QString &gameId, const QString &exePath)
 
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
     if (!game.umuId.isEmpty())
-        env.insert(QStringLiteral("GAMEID"), game.umuId);
-    env.insert(QStringLiteral("WINEPREFIX"), game.prefixPath);
+        env.insert(u"GAMEID"_s, game.umuId);
+    env.insert(u"WINEPREFIX"_s, game.prefixPath);
     if (!game.protonPath.isEmpty())
-        env.insert(QStringLiteral("PROTONPATH"), game.protonPath);
+        env.insert(u"PROTONPATH"_s, game.protonPath);
 
     process->setProcessEnvironment(env);
 
@@ -646,20 +631,19 @@ void Launcher::runExeInPrefix(const QString &gameId, const QString &exePath)
 
     connect(process, &QProcess::errorOccurred, this,
             [this, process = QPointer<QProcess>(process), program](QProcess::ProcessError error) {
-        const QString msg = error == QProcess::FailedToStart
-            ? QStringLiteral("Failed to start %1. Is it installed?").arg(program)
-            : QStringLiteral("Process error: %1").arg(static_cast<int>(error));
-        Q_EMIT runExeInPrefixFinished(false, msg);
-        if (error == QProcess::FailedToStart && process)
-            process->deleteLater();
-    });
+                const QString msg = error == QProcess::FailedToStart
+                                        ? u"Failed to start %1. Is it installed?"_s.arg(program)
+                                        : u"Process error: %1"_s.arg(static_cast<int>(error));
+                Q_EMIT runExeInPrefixFinished(false, msg);
+                if (error == QProcess::FailedToStart && process)
+                    process->deleteLater();
+            });
 
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
             [this, process = QPointer<QProcess>(process)](int exitCode, QProcess::ExitStatus status) {
         const bool ok = (status == QProcess::NormalExit && exitCode == 0);
-        Q_EMIT runExeInPrefixFinished(ok,
-            ok ? QStringLiteral("Executable finished successfully.")
-               : QStringLiteral("Executable exited with code %1.").arg(exitCode));
+        Q_EMIT runExeInPrefixFinished(ok, ok ? u"Executable finished successfully."_s
+                                             : u"Executable exited with code %1."_s.arg(exitCode));
         if (process)
             process->deleteLater();
     });
@@ -670,10 +654,10 @@ void Launcher::runExeInPrefix(const QString &gameId, const QString &exePath)
 bool Launcher::saveSettings(const QVariantMap &settings)
 {
     AppSettings s;
-    s.defaultProton         = settings.value(QStringLiteral("defaultProton")).toString();
-    s.steamgridApiKey       = settings.value(QStringLiteral("steamgridApiKey")).toString();
-    s.defaultLaunchArgs     = settings.value(QStringLiteral("defaultLaunchArgs")).toString();
-    s.defaultWrapperCommand = settings.value(QStringLiteral("defaultWrapperCommand")).toString();
+    s.defaultProton = settings.value(u"defaultProton"_s).toString();
+    s.steamgridApiKey = settings.value(u"steamgridApiKey"_s).toString();
+    s.defaultLaunchArgs = settings.value(u"defaultLaunchArgs"_s).toString();
+    s.defaultWrapperCommand = settings.value(u"defaultWrapperCommand"_s).toString();
 
     if (!m_settingsStore.save(s))
         return false;

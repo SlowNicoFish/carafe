@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import org.kde.kirigami as Kirigami
-import io.marlonn.carafe.backend
 
 Item {
     id: root

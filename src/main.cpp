@@ -1,27 +1,26 @@
+#include <QCoreApplication>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QQmlContext>
 #include <QIcon>
 
 #include "launcher.h"
+using namespace Qt::Literals::StringLiterals;
 
 int main(int argc, char *argv[]) {
   qputenv("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
+  QCoreApplication::setOrganizationName(u"carafe"_s);
+  QCoreApplication::setApplicationName(u"carafe"_s);
   QGuiApplication app(argc, argv);
 
   app.setDesktopFileName(QStringLiteral(APP_ID));
   app.setWindowIcon(QIcon::fromTheme(QStringLiteral(APP_ID)));
 
-  Launcher launcher;
-  qmlRegisterSingletonInstance<Launcher>("io.marlonn.carafe.backend", 1, 0,
-                                         "Backend", &launcher);
-
   QQmlApplicationEngine engine;
-  engine.loadFromModule(QStringLiteral("io.marlonn.carafe"),
-                        QStringLiteral("Main"));
+  engine.loadFromModule(u"io.marlonn.carafe"_s, u"Main"_s);
   if (engine.rootObjects().isEmpty())
     return -1;
 
+  auto &launcher = Launcher::instance();
   launcher.loadLibrary();
   launcher.reloadProtonBuilds();
 

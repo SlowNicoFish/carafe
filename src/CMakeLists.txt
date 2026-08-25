@@ -45,8 +45,6 @@ if(KF6::Wallet)
   target_compile_definitions(carafe PRIVATE HAVE_KWALLET)
 endif()
 
-qt_policy(SET QTP0004 NEW)
-
 qt_add_qml_module(carafe
     NO_IMPORT_SCAN
     URI io.marlonn.carafe

@@ -9,6 +9,7 @@
 #include <QJsonObject>
 #include <QSaveFile>
 #include <QStandardPaths>
+using namespace Qt::Literals::StringLiterals;
 
 Storage::Storage(QObject *parent)
     : QObject(parent)
@@ -17,7 +18,7 @@ Storage::Storage(QObject *parent)
 QString Storage::libraryPath()
 {
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    return dir + QStringLiteral("/library.json");
+    return dir + u"/library.json"_s;
 }
 
 // Renames a corrupt library file out of the way so the next save cannot
@@ -28,8 +29,7 @@ void Storage::quarantineLibrary() const
     if (!QFile::exists(path))
         return;
 
-    const QString backup = path + QStringLiteral(".corrupt-%1")
-                               .arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss")));
+    const QString backup = path + u".corrupt-%1"_s.arg(QDateTime::currentDateTime().toString(u"yyyyMMdd-HHmmss"_s));
     if (QFile::rename(path, backup))
         qWarning() << "Quarantined corrupt library file to" << backup;
     else

@@ -6,16 +6,17 @@
 #include <QStandardPaths>
 
 #include <algorithm>
+using namespace Qt::Literals::StringLiterals;
 
 QList<ProtonBuild> ProtonDetector::discoverBuilds()
 {
     const QString home = QDir::homePath();
 
     QStringList searchDirs = {
-        home + QStringLiteral("/.local/share/Steam/compatibilitytools.d"),
-        home + QStringLiteral("/.steam/root/compatibilitytools.d"),
-        home + QStringLiteral("/.local/share/Steam/steamapps/common"),
-        QStringLiteral("/usr/share/steam/compatibilitytools.d"),
+        home + u"/.local/share/Steam/compatibilitytools.d"_s,
+        home + u"/.steam/root/compatibilitytools.d"_s,
+        home + u"/.local/share/Steam/steamapps/common"_s,
+        u"/usr/share/steam/compatibilitytools.d"_s,
     };
 
     QList<ProtonBuild> builds;
@@ -27,12 +28,11 @@ QList<ProtonBuild> ProtonDetector::discoverBuilds()
 
         const auto entries = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
         for (const QFileInfo &entry : entries) {
-            const QString protonBin = entry.filePath() + QStringLiteral("/proton");
+            const QString protonBin = entry.filePath() + u"/proton"_s;
             if (!QFile::exists(protonBin))
                 continue;
 
-            const bool isValve = QFile::exists(
-                entry.filePath() + QStringLiteral("/files/bin/wine64"));
+            const bool isValve = QFile::exists(entry.filePath() + u"/files/bin/wine64"_s);
 
             ProtonBuild build;
             build.name = entry.fileName();

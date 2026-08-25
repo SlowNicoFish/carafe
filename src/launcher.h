@@ -7,23 +7,42 @@
 #include "steamgrid.h"
 
 #include <QObject>
+#include <QObjectBindableProperty>
+#include <QQmlEngine>
 #include <QMap>
 #include <QProcess>
 #include <QUrl>
+#include <QtQml/qqmlregistration.h>
 
 class Launcher : public QObject
 {
     Q_OBJECT
+    QML_NAMED_ELEMENT(Backend)
+    QML_SINGLETON
     Q_PROPERTY(GameModel *gameModel READ gameModel CONSTANT)
-    Q_PROPERTY(QStringList protonBuilds READ protonBuilds NOTIFY protonBuildsChanged)
-    Q_PROPERTY(QString defaultProton READ defaultProton NOTIFY defaultProtonChanged)
-    Q_PROPERTY(QString steamgridApiKey READ steamgridApiKey NOTIFY steamgridApiKeyChanged)
-    Q_PROPERTY(QString defaultLaunchArgs READ defaultLaunchArgs NOTIFY defaultLaunchArgsChanged)
-    Q_PROPERTY(QString defaultWrapperCommand READ defaultWrapperCommand NOTIFY defaultWrapperCommandChanged)
+    Q_PROPERTY(QStringList protonBuilds READ protonBuilds BINDABLE bindableProtonBuilds NOTIFY protonBuildsChanged)
+    Q_PROPERTY(QString defaultProton READ defaultProton BINDABLE bindableDefaultProton NOTIFY defaultProtonChanged)
+    Q_PROPERTY(
+        QString steamgridApiKey READ steamgridApiKey BINDABLE bindableSteamgridApiKey NOTIFY steamgridApiKeyChanged)
+    Q_PROPERTY(QString defaultLaunchArgs READ defaultLaunchArgs BINDABLE bindableDefaultLaunchArgs NOTIFY
+                   defaultLaunchArgsChanged)
+    Q_PROPERTY(QString defaultWrapperCommand READ defaultWrapperCommand BINDABLE bindableDefaultWrapperCommand NOTIFY
+                   defaultWrapperCommandChanged)
 
 public:
     explicit Launcher(QObject *parent = nullptr);
     ~Launcher() override;
+
+    static Launcher &instance() {
+        static Launcher inst;
+        return inst;
+    }
+
+    static Launcher *create(QQmlEngine *, QJSEngine *) {
+        auto *inst = &instance();
+        QQmlEngine::setObjectOwnership(inst, QQmlEngine::CppOwnership);
+        return inst;
+    }
 
     GameModel   *gameModel();
     QStringList  protonBuilds() const;
@@ -31,6 +50,12 @@ public:
     QString      steamgridApiKey();
     QString      defaultLaunchArgs() const;
     QString      defaultWrapperCommand() const;
+
+    QBindable<QStringList> bindableProtonBuilds() { return &m_protonBuilds; }
+    QBindable<QString> bindableDefaultProton() { return &m_defaultProton; }
+    QBindable<QString> bindableSteamgridApiKey() { return &m_steamgridApiKey; }
+    QBindable<QString> bindableDefaultLaunchArgs() { return &m_defaultLaunchArgs; }
+    QBindable<QString> bindableDefaultWrapperCommand() { return &m_defaultWrapperCommand; }
 
     Q_INVOKABLE static QString urlToLocalFile(const QUrl &url);
     Q_INVOKABLE static QUrl   localFileToUrl(const QString &path);
@@ -84,11 +109,15 @@ private:
     GameModel           m_gameModel;
     Storage             m_storage;
     SettingsStore       m_settingsStore;
-    SteamGrid           m_steamGrid;
-    AppSettings         m_settings;
-    bool                m_apiKeyLoaded = false;
-    QStringList         m_protonBuilds;
+    SteamGrid m_steamGrid;
+    bool m_apiKeyLoaded = false;
     QList<ProtonBuild>  m_discoveredProtonBuilds;
     QMap<QUuid, QProcess*>  m_runningGames;
     QMap<QUuid, QString>    m_previewRequests;
+
+    Q_OBJECT_BINDABLE_PROPERTY(Launcher, QStringList, m_protonBuilds, &Launcher::protonBuildsChanged)
+    Q_OBJECT_BINDABLE_PROPERTY(Launcher, QString, m_defaultProton, &Launcher::defaultProtonChanged)
+    Q_OBJECT_BINDABLE_PROPERTY(Launcher, QString, m_steamgridApiKey, &Launcher::steamgridApiKeyChanged)
+    Q_OBJECT_BINDABLE_PROPERTY(Launcher, QString, m_defaultLaunchArgs, &Launcher::defaultLaunchArgsChanged)
+    Q_OBJECT_BINDABLE_PROPERTY(Launcher, QString, m_defaultWrapperCommand, &Launcher::defaultWrapperCommandChanged)
 };

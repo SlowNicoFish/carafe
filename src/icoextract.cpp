@@ -5,13 +5,13 @@
 #include <QFileInfo>
 #include <QProcess>
 #include <QStandardPaths>
+using namespace Qt::Literals::StringLiterals;
 
 namespace IcoExtract {
 
 QString iconDir()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
-           + QStringLiteral("/icons");
+    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + u"/icons"_s;
 }
 
 QString extractIcon(const QUuid &gameId, const QString &exePath)
@@ -24,7 +24,7 @@ QString extractIcon(const QUuid &gameId, const QString &exePath)
     dir.mkpath(dirPath);
 
     const QString gameIdStr = gameId.toString(QUuid::WithoutBraces);
-    const QString finalPngPath = dirPath + QStringLiteral("/%1.png").arg(gameIdStr);
+    const QString finalPngPath = dirPath + u"/%1.png"_s.arg(gameIdStr);
 
     if (QFile::exists(finalPngPath)) {
         return finalPngPath;
@@ -33,7 +33,7 @@ QString extractIcon(const QUuid &gameId, const QString &exePath)
     // Step 1: Run wrestool to extract ICO data from exe.
     // Large executables can take a while; allow up to 30 seconds before giving up.
     QProcess wrestool;
-    wrestool.start(QStringLiteral("wrestool"), {QStringLiteral("-t"), QStringLiteral("14"), QStringLiteral("-x"), exePath});
+    wrestool.start(u"wrestool"_s, {u"-t"_s, u"14"_s, u"-x"_s, exePath});
     if (!wrestool.waitForFinished(30000)) {
         wrestool.terminate();
         if (!wrestool.waitForFinished(3000))
@@ -55,7 +55,7 @@ QString extractIcon(const QUuid &gameId, const QString &exePath)
         return {};
     }
 
-    const QString tmpIcoPath = dirPath + QStringLiteral("/%1_tmp.ico").arg(gameIdStr);
+    const QString tmpIcoPath = dirPath + u"/%1_tmp.ico"_s.arg(gameIdStr);
     QFile tmpIcoFile(tmpIcoPath);
     if (!tmpIcoFile.open(QIODevice::WriteOnly)) {
         return {};
@@ -67,7 +67,7 @@ QString extractIcon(const QUuid &gameId, const QString &exePath)
     // Use the same generous timeout as wrestool for consistency.
     QProcess icotool;
     icotool.setWorkingDirectory(dirPath);
-    icotool.start(QStringLiteral("icotool"), {QStringLiteral("-x"), tmpIcoPath});
+    icotool.start(u"icotool"_s, {u"-x"_s, tmpIcoPath});
     if (!icotool.waitForFinished(30000)) {
         icotool.terminate();
         if (!icotool.waitForFinished(3000))
@@ -83,8 +83,8 @@ QString extractIcon(const QUuid &gameId, const QString &exePath)
     }
 
     // Step 3: Find the best PNG file matching the stem and clean up others
-    const QString stem = QStringLiteral("%1_tmp").arg(gameIdStr);
-    const auto entries = dir.entryInfoList({stem + QStringLiteral("*.png")}, QDir::Files);
+    const QString stem = u"%1_tmp"_s.arg(gameIdStr);
+    const auto entries = dir.entryInfoList({stem + u"*.png"_s}, QDir::Files);
 
     QString bestPngPath;
     qint64 maxSize = -1;

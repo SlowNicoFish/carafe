@@ -3,7 +3,6 @@ import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import QtQuick.Dialogs
 import org.kde.kirigami as Kirigami
-import io.marlonn.carafe.backend
 
 Kirigami.Dialog {
     id: dialog

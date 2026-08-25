@@ -1,4 +1,5 @@
 #include "game.h"
+using namespace Qt::Literals::StringLiterals;
 
 Game Game::create(const QString &title, const QString &exePath, const QString &prefixPath)
 {
@@ -13,36 +14,36 @@ Game Game::create(const QString &title, const QString &exePath, const QString &p
 QJsonObject Game::toJson() const
 {
     QJsonObject obj;
-    obj[QStringLiteral("id")]                = id.toString(QUuid::WithoutBraces);
-    obj[QStringLiteral("title")]             = title;
-    obj[QStringLiteral("exePath")]           = exePath;
-    obj[QStringLiteral("launchArgs")]        = launchArgs;
-    obj[QStringLiteral("wrapperCommand")]    = wrapperCommand;
-    obj[QStringLiteral("prefixPath")]        = prefixPath;
-    obj[QStringLiteral("protonVersion")]     = protonVersion;
+    obj[u"id"_s] = id.toString(QUuid::WithoutBraces);
+    obj[u"title"_s] = title;
+    obj[u"exePath"_s] = exePath;
+    obj[u"launchArgs"_s] = launchArgs;
+    obj[u"wrapperCommand"_s] = wrapperCommand;
+    obj[u"prefixPath"_s] = prefixPath;
+    obj[u"protonVersion"_s] = protonVersion;
     // protonPath is intentionally not persisted, it is always re-resolved
     // from protonVersion at load time via ProtonDetector.
-    obj[QStringLiteral("umuId")]             = umuId;
-    obj[QStringLiteral("iconPath")]          = iconPath;
-    obj[QStringLiteral("gridPath")]          = gridPath;
-    obj[QStringLiteral("steamgridIconPath")] = steamgridIconPath;
+    obj[u"umuId"_s] = umuId;
+    obj[u"iconPath"_s] = iconPath;
+    obj[u"gridPath"_s] = gridPath;
+    obj[u"steamgridIconPath"_s] = steamgridIconPath;
     return obj;
 }
 
 Game Game::fromJson(const QJsonObject &obj)
 {
     Game g;
-    g.id               = QUuid::fromString(obj[QStringLiteral("id")].toString());
-    g.title            = obj[QStringLiteral("title")].toString();
-    g.exePath          = obj[QStringLiteral("exePath")].toString();
-    g.launchArgs       = obj[QStringLiteral("launchArgs")].toString();
-    g.wrapperCommand   = obj[QStringLiteral("wrapperCommand")].toString();
-    g.prefixPath       = obj[QStringLiteral("prefixPath")].toString();
-    g.protonVersion    = obj[QStringLiteral("protonVersion")].toString();
+    g.id = QUuid::fromString(obj[u"id"_s].toString());
+    g.title = obj[u"title"_s].toString();
+    g.exePath = obj[u"exePath"_s].toString();
+    g.launchArgs = obj[u"launchArgs"_s].toString();
+    g.wrapperCommand = obj[u"wrapperCommand"_s].toString();
+    g.prefixPath = obj[u"prefixPath"_s].toString();
+    g.protonVersion = obj[u"protonVersion"_s].toString();
     // protonPath is left empty here; Launcher resolves it after loading.
-    g.umuId            = obj[QStringLiteral("umuId")].toString();
-    g.iconPath         = obj[QStringLiteral("iconPath")].toString();
-    g.gridPath         = obj[QStringLiteral("gridPath")].toString();
-    g.steamgridIconPath = obj[QStringLiteral("steamgridIconPath")].toString();
+    g.umuId = obj[u"umuId"_s].toString();
+    g.iconPath = obj[u"iconPath"_s].toString();
+    g.gridPath = obj[u"gridPath"_s].toString();
+    g.steamgridIconPath = obj[u"steamgridIconPath"_s].toString();
     return g;
 }

@@ -5,7 +5,6 @@ import QtQuick.Controls as QQC2
 import QtQuick.Dialogs
 import org.kde.kirigami as Kirigami
 import org.kde.kirigami.dialogs as KirigamiDialogs
-import io.marlonn.carafe.backend
 
 Kirigami.ApplicationWindow {
     id: window

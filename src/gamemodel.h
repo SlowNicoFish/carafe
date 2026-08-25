@@ -6,12 +6,15 @@
 #include <QList>
 #include <QSet>
 #include <QUuid>
+#include <QtQml/qqmlregistration.h>
 
 /**
  * Qt list model that exposes the game library to QML.
  */
 class GameModel : public QAbstractListModel {
   Q_OBJECT
+  QML_NAMED_ELEMENT(GameModel)
+  QML_UNCREATABLE("Instantiated internally by Backend")
   Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
 
 public:

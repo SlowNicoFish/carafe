@@ -8,6 +8,8 @@
 #include <QSaveFile>
 #include <QStandardPaths>
 
+using namespace Qt::Literals::StringLiterals;
+
 #ifdef HAVE_KWALLET
 #include <KWallet/KWallet>
 #endif
@@ -19,14 +21,14 @@ SettingsStore::SettingsStore(QObject *parent)
 QString SettingsStore::settingsPath()
 {
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    return dir + QStringLiteral("/settings.json");
+    return dir + u"/settings.json"_s;
 }
 
 #ifdef HAVE_KWALLET
 
 static const QString walletFolder()
 {
-    return QStringLiteral("Carafe");
+    return u"Carafe"_s;
 }
 
 static KWallet::Wallet *openWallet()
@@ -45,7 +47,7 @@ static QString readKeyFromWallet(KWallet::Wallet *wallet)
         return {};
     wallet->setFolder(walletFolder());
     QString value;
-    if (wallet->readPassword(QStringLiteral("steamgridApiKey"), value) != 0)
+    if (wallet->readPassword(u"steamgridApiKey"_s, value) != 0)
         return {};
     return value;
 }
@@ -56,9 +58,9 @@ static void writeKeyToWallet(KWallet::Wallet *wallet, const QString &key)
         return;
     wallet->setFolder(walletFolder());
     if (key.isEmpty())
-        wallet->removeEntry(QStringLiteral("steamgridApiKey"));
+        wallet->removeEntry(u"steamgridApiKey"_s);
     else
-        wallet->writePassword(QStringLiteral("steamgridApiKey"), key);
+        wallet->writePassword(u"steamgridApiKey"_s, key);
 }
 
 #endif
@@ -86,11 +88,11 @@ AppSettings SettingsStore::loadBasic()
     }
 
     AppSettings s;
-    s.defaultProton         = obj[QStringLiteral("defaultProton")].toString();
-    s.defaultLaunchArgs     = obj[QStringLiteral("defaultLaunchArgs")].toString();
-    s.defaultWrapperCommand = obj[QStringLiteral("defaultWrapperCommand")].toString();
+    s.defaultProton = obj[u"defaultProton"_s].toString();
+    s.defaultLaunchArgs = obj[u"defaultLaunchArgs"_s].toString();
+    s.defaultWrapperCommand = obj[u"defaultWrapperCommand"_s].toString();
     // Kept as the fallback for loadApiKey() when no keyring is available.
-    s.steamgridApiKey       = obj[QStringLiteral("steamgridApiKey")].toString();
+    s.steamgridApiKey = obj[u"steamgridApiKey"_s].toString();
 
     return s;
 }
@@ -117,21 +119,21 @@ bool SettingsStore::save(const AppSettings &s) const
     QDir().mkpath(QFileInfo(path).absolutePath());
 
     QJsonObject obj;
-    obj[QStringLiteral("defaultProton")]         = s.defaultProton;
-    obj[QStringLiteral("defaultLaunchArgs")]     = s.defaultLaunchArgs;
-    obj[QStringLiteral("defaultWrapperCommand")] = s.defaultWrapperCommand;
+    obj[u"defaultProton"_s] = s.defaultProton;
+    obj[u"defaultLaunchArgs"_s] = s.defaultLaunchArgs;
+    obj[u"defaultWrapperCommand"_s] = s.defaultWrapperCommand;
 
 #ifdef HAVE_KWALLET
     KWallet::Wallet *wallet = openWallet();
     if (wallet) {
         writeKeyToWallet(wallet, s.steamgridApiKey);
-        obj[QStringLiteral("hasSteamgridApiKey")] = !s.steamgridApiKey.isEmpty();
+        obj[u"hasSteamgridApiKey"_s] = !s.steamgridApiKey.isEmpty();
         delete wallet;
     } else {
-        obj[QStringLiteral("steamgridApiKey")] = s.steamgridApiKey;
+        obj[u"steamgridApiKey"_s] = s.steamgridApiKey;
     }
 #else
-    obj[QStringLiteral("steamgridApiKey")] = s.steamgridApiKey;
+    obj[u"steamgridApiKey"_s] = s.steamgridApiKey;
 #endif
 
     QSaveFile f(path);
