@@ -84,6 +84,7 @@ public:
                                    const QString &prefixPath,
                                    const QString &protonVersion);
     Q_INVOKABLE void runExeInPrefix(const QString &gameId, const QString &exePath);
+    Q_INVOKABLE QString importImage(const QString &sourcePath, const QString &gameId, const QString &suffix);
 
 Q_SIGNALS:
     void protonBuildsChanged();

@@ -88,9 +88,8 @@ Kirigami.Dialog {
             }
 
             RowLayout {
-                Kirigami.FormData.label: "Artwork:"
-                visible: _previewGridPath.length > 0 || _previewIconPath.length > 0
-                spacing: Kirigami.Units.largeSpacing
+                Kirigami.FormData.label: "Grid image:"
+                spacing: Kirigami.Units.smallSpacing
 
                 Image {
                     source: _previewGridPath.length > 0 ? Backend.localFileToUrl(_previewGridPath) : ""
@@ -100,12 +99,29 @@ Kirigami.Dialog {
                     Layout.preferredWidth: 160
                 }
 
+                QQC2.Button {
+                    text: "Browse…"
+                    icon.name: "image-x-generic"
+                    onClicked: gridImageDialog.open()
+                }
+            }
+
+            RowLayout {
+                Kirigami.FormData.label: "Icon:"
+                spacing: Kirigami.Units.smallSpacing
+
                 Image {
                     source: _previewIconPath.length > 0 ? Backend.localFileToUrl(_previewIconPath) : ""
                     visible: _previewIconPath.length > 0
                     fillMode: Image.PreserveAspectFit
                     Layout.preferredHeight: 100
-                    Layout.preferredWidth: 160
+                    Layout.preferredWidth: 100
+                }
+
+                QQC2.Button {
+                    text: "Browse…"
+                    icon.name: "image-x-generic"
+                    onClicked: iconImageDialog.open()
                 }
             }
 
@@ -237,6 +253,30 @@ Kirigami.Dialog {
                                  prefixField.text,
                                  protonCombo.currentIndex >= 0 ? protonCombo.currentText : "")
          }
+    }
+
+    FileDialog {
+        id: gridImageDialog
+        title: "Select grid image"
+        nameFilters: ["Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "All Files (*)"]
+        onAccepted: {
+            const path = dialog.urlToPath(selectedFile);
+            const imported = Backend.importImage(path, "", "grid");
+            if (imported.length > 0)
+                dialog._previewGridPath = imported;
+        }
+    }
+
+    FileDialog {
+        id: iconImageDialog
+        title: "Select icon image"
+        nameFilters: ["Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "All Files (*)"]
+        onAccepted: {
+            const path = dialog.urlToPath(selectedFile);
+            const imported = Backend.importImage(path, "", "icon");
+            if (imported.length > 0)
+                dialog._previewIconPath = imported;
+        }
     }
 
     Connections {

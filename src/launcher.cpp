@@ -2,7 +2,10 @@
 #include "icoextract.h"
 
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QPointer>
+#include <QStandardPaths>
 #include <QTimer>
 #include <QUrl>
 #include <QtConcurrent>
@@ -649,6 +652,30 @@ void Launcher::runExeInPrefix(const QString &gameId, const QString &exePath)
     });
 
     process->start(program, args);
+}
+
+QString Launcher::importImage(const QString &sourcePath, const QString &gameId, const QString &suffix) {
+    if (sourcePath.isEmpty())
+        return {};
+
+    const QFileInfo srcInfo(sourcePath);
+    if (!srcInfo.exists() || !srcInfo.isFile())
+        return {};
+
+    const QString id = gameId.isEmpty() ? QUuid::createUuid().toString(QUuid::WithoutBraces) : gameId;
+    const QString ext = srcInfo.suffix().toLower();
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + u"/icons"_s;
+    QDir().mkpath(dir);
+
+    const QString dest = u"%1/%2_%3.%4"_s.arg(dir, id, suffix, ext);
+    if (sourcePath == dest)
+        return dest;
+
+    QFile::remove(dest);
+    if (!QFile::copy(sourcePath, dest))
+        return {};
+
+    return dest;
 }
 
 bool Launcher::saveSettings(const QVariantMap &settings)

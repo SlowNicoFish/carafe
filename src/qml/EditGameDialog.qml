@@ -11,6 +11,10 @@ Kirigami.Dialog {
 
     property string gameId: ""
     property var protonBuilds: []
+    property bool _fetchingArtwork: false
+    property string _pendingFetchTitle: ""
+    property string _gridPath: ""
+    property string _iconPath: ""
 
     function openGame(id) {
         Backend.reloadProtonBuilds();
@@ -24,6 +28,9 @@ Kirigami.Dialog {
         launchArgsField.text = game.launchArgs ?? "";
         wrapperField.text = game.wrapperCommand ?? "";
         umuField.text = game.umuId ?? "";
+        _gridPath = game.gridPath ?? "";
+        _iconPath = game.steamgridIconPath ?? "";
+        _fetchingArtwork = false;
         const idx = protonCombo.find(game.protonVersion ?? "");
         protonCombo.currentIndex = idx;
         dialog.open();
@@ -102,6 +109,58 @@ Kirigami.Dialog {
                 Kirigami.FormData.label: "UMU game ID:"
                 placeholderText: "Optional"
             }
+
+            RowLayout {
+                Kirigami.FormData.label: "Grid image:"
+                spacing: Kirigami.Units.smallSpacing
+
+                Image {
+                    source: _gridPath.length > 0 ? Backend.localFileToUrl(_gridPath) : ""
+                    visible: _gridPath.length > 0
+                    fillMode: Image.PreserveAspectFit
+                    Layout.preferredHeight: 100
+                    Layout.preferredWidth: 160
+                }
+
+                QQC2.Button {
+                    text: "Browse…"
+                    icon.name: "image-x-generic"
+                    onClicked: gridImageDialog.open()
+                }
+            }
+
+            RowLayout {
+                Kirigami.FormData.label: "Icon:"
+                spacing: Kirigami.Units.smallSpacing
+
+                Image {
+                    source: _iconPath.length > 0 ? Backend.localFileToUrl(_iconPath) : ""
+                    visible: _iconPath.length > 0
+                    fillMode: Image.PreserveAspectFit
+                    Layout.preferredHeight: 100
+                    Layout.preferredWidth: 100
+                }
+
+                QQC2.Button {
+                    text: "Browse…"
+                    icon.name: "image-x-generic"
+                    onClicked: iconImageDialog.open()
+                }
+            }
+
+            QQC2.Button {
+                Kirigami.FormData.label: "Artwork:"
+                text: _fetchingArtwork ? "Fetching…" : "Fetch from SteamGridDB"
+                icon.name: _fetchingArtwork ? "view-refresh" : "download"
+                enabled: titleField.text.trim().length > 0 && !_fetchingArtwork
+                onClicked: {
+                    const title = titleField.text.trim();
+                    dialog._pendingFetchTitle = title;
+                    _fetchingArtwork = true;
+                    Backend.fetchGridArtwork(title);
+                    Backend.fetchIconArtwork(title);
+                }
+            }
         }
     }
 
@@ -121,7 +180,9 @@ Kirigami.Dialog {
                     wrapperCommand: wrapperField.text,
                     prefixPath: prefixField.text.trim(),
                     protonVersion: protonCombo.currentIndex >= 0 ? protonCombo.currentText : "",
-                    umuId: umuField.text.trim()
+                    umuId: umuField.text.trim(),
+                    gridPath: dialog._gridPath,
+                    steamgridIconPath: dialog._iconPath
                 });
                 dialog.close();
             }
@@ -148,5 +209,57 @@ Kirigami.Dialog {
         id: prefixDialog
         title: "Select Wine prefix directory"
         onAccepted: prefixField.text = dialog.urlToPath(selectedFolder)
+    }
+
+    FileDialog {
+        id: gridImageDialog
+        title: "Select grid image"
+        nameFilters: ["Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "All Files (*)"]
+        onAccepted: {
+            const path = dialog.urlToPath(selectedFile);
+            const imported = Backend.importImage(path, dialog.gameId, "grid");
+            if (imported.length > 0)
+                dialog._gridPath = imported;
+        }
+    }
+
+    FileDialog {
+        id: iconImageDialog
+        title: "Select icon image"
+        nameFilters: ["Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "All Files (*)"]
+        onAccepted: {
+            const path = dialog.urlToPath(selectedFile);
+            const imported = Backend.importImage(path, dialog.gameId, "icon");
+            if (imported.length > 0)
+                dialog._iconPath = imported;
+        }
+    }
+
+    Connections {
+        target: Backend
+        function onGridPreviewReady(gameName, path) {
+            dialog._fetchingArtwork = false;
+            if (gameName === dialog._pendingFetchTitle)
+                dialog._gridPath = path;
+        }
+        function onIconPreviewReady(gameName, path) {
+            dialog._fetchingArtwork = false;
+            if (gameName === dialog._pendingFetchTitle)
+                dialog._iconPath = path;
+        }
+        function onGridPreviewFailed(gameName, error) {
+            dialog._fetchingArtwork = false;
+            if (gameName === dialog._pendingFetchTitle) {
+                validationMessage.text = error;
+                validationMessage.visible = true;
+            }
+        }
+        function onIconPreviewFailed(gameName, error) {
+            dialog._fetchingArtwork = false;
+            if (gameName === dialog._pendingFetchTitle) {
+                validationMessage.text = error;
+                validationMessage.visible = true;
+            }
+        }
     }
 }
