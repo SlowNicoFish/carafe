@@ -1,18 +1,16 @@
 #include "game.h"
 using namespace Qt::Literals::StringLiterals;
 
-Game Game::create(const QString &title, const QString &exePath, const QString &prefixPath)
-{
+Game Game::create(const QString &title, const QString &exePath, const QString &prefixPath) {
     Game g;
-    g.id          = QUuid::createUuid();
-    g.title       = title;
-    g.exePath     = exePath;
-    g.prefixPath  = prefixPath;
+    g.id = QUuid::createUuid();
+    g.title = title;
+    g.exePath = exePath;
+    g.prefixPath = prefixPath;
     return g;
 }
 
-QJsonObject Game::toJson() const
-{
+QJsonObject Game::toJson() const {
     QJsonObject obj;
     obj[u"id"_s] = id.toString(QUuid::WithoutBraces);
     obj[u"title"_s] = title;
@@ -21,8 +19,8 @@ QJsonObject Game::toJson() const
     obj[u"wrapperCommand"_s] = wrapperCommand;
     obj[u"prefixPath"_s] = prefixPath;
     obj[u"protonVersion"_s] = protonVersion;
-    // protonPath is intentionally not persisted, it is always re-resolved
-    // from protonVersion at load time via ProtonDetector.
+    // protonPath is intentionally not persisted, it is always re-resolved from
+    // protonVersion at load time via ProtonManager::resolvePath.
     obj[u"umuId"_s] = umuId;
     obj[u"iconPath"_s] = iconPath;
     obj[u"gridPath"_s] = gridPath;
@@ -30,8 +28,7 @@ QJsonObject Game::toJson() const
     return obj;
 }
 
-Game Game::fromJson(const QJsonObject &obj)
-{
+Game Game::fromJson(const QJsonObject &obj) {
     Game g;
     g.id = QUuid::fromString(obj[u"id"_s].toString());
     g.title = obj[u"title"_s].toString();

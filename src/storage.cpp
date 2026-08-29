@@ -12,19 +12,16 @@
 using namespace Qt::Literals::StringLiterals;
 
 Storage::Storage(QObject *parent)
-    : QObject(parent)
-{}
+    : QObject(parent) {}
 
-QString Storage::libraryPath()
-{
+QString Storage::libraryPath() {
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     return dir + u"/library.json"_s;
 }
 
 // Renames a corrupt library file out of the way so the next save cannot
 // silently destroy whatever data it still contained.
-void Storage::quarantineLibrary() const
-{
+void Storage::quarantineLibrary() const {
     const QString path = libraryPath();
     if (!QFile::exists(path))
         return;
@@ -36,8 +33,7 @@ void Storage::quarantineLibrary() const
         qWarning() << "Could not quarantine corrupt library file:" << path;
 }
 
-QList<Game> Storage::loadLibrary() const
-{
+QList<Game> Storage::loadLibrary() const {
     QFile f(libraryPath());
     if (!f.open(QIODevice::ReadOnly))
         return {};
@@ -67,8 +63,7 @@ QList<Game> Storage::loadLibrary() const
     return games;
 }
 
-bool Storage::saveLibrary(const QList<Game> &games) const
-{
+bool Storage::saveLibrary(const QList<Game> &games) const {
     const QString path = libraryPath();
     QDir().mkpath(QFileInfo(path).absolutePath());
 

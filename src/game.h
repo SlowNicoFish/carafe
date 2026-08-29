@@ -5,7 +5,7 @@
 #include <QJsonObject>
 
 struct Game {
-    QUuid   id;
+    QUuid id;
     QString title;
     QString exePath;
     QString launchArgs;

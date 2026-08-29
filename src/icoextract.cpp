@@ -9,13 +9,11 @@ using namespace Qt::Literals::StringLiterals;
 
 namespace IcoExtract {
 
-QString iconDir()
-{
+QString iconDir() {
     return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + u"/icons"_s;
 }
 
-QString extractIcon(const QUuid &gameId, const QString &exePath)
-{
+QString extractIcon(const QUuid &gameId, const QString &exePath) {
     if (gameId.isNull() || exePath.isEmpty())
         return {};
 

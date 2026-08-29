@@ -8,8 +8,7 @@
 #include <algorithm>
 using namespace Qt::Literals::StringLiterals;
 
-QList<ProtonBuild> ProtonDetector::discoverBuilds()
-{
+QList<ProtonBuild> ProtonDetector::discoverBuilds() {
     const QString home = QDir::homePath();
 
     QStringList searchDirs = {
@@ -32,34 +31,30 @@ QList<ProtonBuild> ProtonDetector::discoverBuilds()
             if (!QFile::exists(protonBin))
                 continue;
 
-            const bool isValve = QFile::exists(entry.filePath() + u"/files/bin/wine64"_s);
-
             ProtonBuild build;
             build.name = entry.fileName();
             build.path = entry.filePath();
-            build.isValveProton = isValve;
             builds.append(build);
         }
     }
 
     QSet<QString> seen;
-    builds.erase(std::remove_if(builds.begin(), builds.end(), [&](const ProtonBuild &b) {
-        const QString canonical = QFileInfo(b.path).canonicalFilePath();
-        if (seen.contains(canonical))
-            return true;
-        seen.insert(canonical);
-        return false;
-    }), builds.end());
+    builds.erase(std::remove_if(builds.begin(), builds.end(),
+                                [&](const ProtonBuild &b) {
+                                    const QString canonical = QFileInfo(b.path).canonicalFilePath();
+                                    if (seen.contains(canonical))
+                                        return true;
+                                    seen.insert(canonical);
+                                    return false;
+                                }),
+                 builds.end());
 
-    std::sort(builds.begin(), builds.end(), [](const ProtonBuild &a, const ProtonBuild &b) {
-        return a.name < b.name;
-    });
+    std::sort(builds.begin(), builds.end(), [](const ProtonBuild &a, const ProtonBuild &b) { return a.name < b.name; });
 
     return builds;
 }
 
-QStringList ProtonDetector::buildNames(const QList<ProtonBuild> &builds)
-{
+QStringList ProtonDetector::buildNames(const QList<ProtonBuild> &builds) {
     QStringList names;
     names.reserve(builds.size());
     std::transform(builds.cbegin(), builds.cend(), std::back_inserter(names),

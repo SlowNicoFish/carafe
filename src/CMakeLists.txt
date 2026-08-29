@@ -6,10 +6,18 @@ qt_add_executable(carafe
     gamemodel.cpp
     proton.h
     proton.cpp
+    protonmgr.h
+    protonmgr.cpp
+    shellargs.h
+    shellargs.cpp
     settings.h
     settings.cpp
     storage.h
     storage.cpp
+    glibrary.h
+    glibrary.cpp
+    launchmgr.h
+    launchmgr.cpp
     launcher.h
     launcher.cpp
     steamgrid.h

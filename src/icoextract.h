@@ -3,11 +3,10 @@
 #include <QString>
 #include <QUuid>
 
-namespace IcoExtract
-{
+namespace IcoExtract {
 
 QString iconDir();
 
 QString extractIcon(const QUuid &gameId, const QString &exePath);
 
-}
+} // namespace IcoExtract

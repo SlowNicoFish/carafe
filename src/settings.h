@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QJsonObject>
 #include <QObject>
 #include <QString>
 
@@ -22,8 +23,7 @@ struct AppSettings {
  * Freedesktop Secret Service) when available, with a fallback to the
  * JSON file.
  */
-class SettingsStore : public QObject
-{
+class SettingsStore : public QObject {
     Q_OBJECT
 
 public:
@@ -33,11 +33,12 @@ public:
     static AppSettings loadBasic();
     /** Reads the SteamGridDB API key from the keyring (may block briefly). */
     static QString loadApiKey(const QString &jsonFallback);
-    bool        save(const AppSettings &settings) const;
+    bool save(const AppSettings &settings) const;
 
     /** Returns true when the system keyring is usable at run time. */
     static bool keyringAvailable();
 
 private:
     static QString settingsPath();
+    static bool writeSettingsFile(const QJsonObject &obj);
 };

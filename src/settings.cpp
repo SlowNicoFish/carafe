@@ -15,34 +15,28 @@ using namespace Qt::Literals::StringLiterals;
 #endif
 
 SettingsStore::SettingsStore(QObject *parent)
-    : QObject(parent)
-{}
+    : QObject(parent) {}
 
-QString SettingsStore::settingsPath()
-{
-    const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+QString SettingsStore::settingsPath() {
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
     return dir + u"/settings.json"_s;
 }
 
 #ifdef HAVE_KWALLET
 
-static const QString walletFolder()
-{
+static const QString walletFolder() {
     return u"Carafe"_s;
 }
 
-static KWallet::Wallet *openWallet()
-{
+static KWallet::Wallet *openWallet() {
     return KWallet::Wallet::openWallet(KWallet::Wallet::LocalWallet(), 0);
 }
 
-static bool hasWallet()
-{
+static bool hasWallet() {
     return KWallet::Wallet::isEnabled();
 }
 
-static QString readKeyFromWallet(KWallet::Wallet *wallet)
-{
+static QString readKeyFromWallet(KWallet::Wallet *wallet) {
     if (!wallet->hasFolder(walletFolder()) && !wallet->createFolder(walletFolder()))
         return {};
     wallet->setFolder(walletFolder());
@@ -52,8 +46,7 @@ static QString readKeyFromWallet(KWallet::Wallet *wallet)
     return value;
 }
 
-static void writeKeyToWallet(KWallet::Wallet *wallet, const QString &key)
-{
+static void writeKeyToWallet(KWallet::Wallet *wallet, const QString &key) {
     if (!wallet->hasFolder(walletFolder()) && !wallet->createFolder(walletFolder()))
         return;
     wallet->setFolder(walletFolder());
@@ -65,8 +58,7 @@ static void writeKeyToWallet(KWallet::Wallet *wallet, const QString &key)
 
 #endif
 
-bool SettingsStore::keyringAvailable()
-{
+bool SettingsStore::keyringAvailable() {
 #ifdef HAVE_KWALLET
     return hasWallet();
 #else
@@ -74,8 +66,7 @@ bool SettingsStore::keyringAvailable()
 #endif
 }
 
-AppSettings SettingsStore::loadBasic()
-{
+AppSettings SettingsStore::loadBasic() {
     QFile f(settingsPath());
     QJsonObject obj;
     if (f.open(QIODevice::ReadOnly)) {
@@ -97,8 +88,7 @@ AppSettings SettingsStore::loadBasic()
     return s;
 }
 
-QString SettingsStore::loadApiKey(const QString &jsonFallback)
-{
+QString SettingsStore::loadApiKey(const QString &jsonFallback) {
 #ifdef HAVE_KWALLET
     if (hasWallet()) {
         KWallet::Wallet *wallet = openWallet();
@@ -113,28 +103,9 @@ QString SettingsStore::loadApiKey(const QString &jsonFallback)
     return jsonFallback;
 }
 
-bool SettingsStore::save(const AppSettings &s) const
-{
+bool SettingsStore::writeSettingsFile(const QJsonObject &obj) {
     const QString path = settingsPath();
     QDir().mkpath(QFileInfo(path).absolutePath());
-
-    QJsonObject obj;
-    obj[u"defaultProton"_s] = s.defaultProton;
-    obj[u"defaultLaunchArgs"_s] = s.defaultLaunchArgs;
-    obj[u"defaultWrapperCommand"_s] = s.defaultWrapperCommand;
-
-#ifdef HAVE_KWALLET
-    KWallet::Wallet *wallet = openWallet();
-    if (wallet) {
-        writeKeyToWallet(wallet, s.steamgridApiKey);
-        obj[u"hasSteamgridApiKey"_s] = !s.steamgridApiKey.isEmpty();
-        delete wallet;
-    } else {
-        obj[u"steamgridApiKey"_s] = s.steamgridApiKey;
-    }
-#else
-    obj[u"steamgridApiKey"_s] = s.steamgridApiKey;
-#endif
 
     QSaveFile f(path);
     if (!f.open(QIODevice::WriteOnly))
@@ -142,4 +113,32 @@ bool SettingsStore::save(const AppSettings &s) const
 
     f.write(QJsonDocument(obj).toJson());
     return f.commit();
+}
+
+bool SettingsStore::save(const AppSettings &s) const {
+#ifdef HAVE_KWALLET
+    if (hasWallet()) {
+        if (KWallet::Wallet *wallet = openWallet()) {
+            writeKeyToWallet(wallet, s.steamgridApiKey);
+            delete wallet;
+
+            // The key lives in the keyring; only persist a presence marker so
+            // the plaintext key never lands in the JSON file.
+            QJsonObject obj;
+            obj[u"defaultProton"_s] = s.defaultProton;
+            obj[u"defaultLaunchArgs"_s] = s.defaultLaunchArgs;
+            obj[u"defaultWrapperCommand"_s] = s.defaultWrapperCommand;
+            obj[u"hasSteamgridApiKey"_s] = !s.steamgridApiKey.isEmpty();
+            return writeSettingsFile(obj);
+        }
+    }
+#endif
+
+    // No keyring: persist the raw key as the fallback for loadApiKey().
+    QJsonObject obj;
+    obj[u"defaultProton"_s] = s.defaultProton;
+    obj[u"defaultLaunchArgs"_s] = s.defaultLaunchArgs;
+    obj[u"defaultWrapperCommand"_s] = s.defaultWrapperCommand;
+    obj[u"steamgridApiKey"_s] = s.steamgridApiKey;
+    return writeSettingsFile(obj);
 }

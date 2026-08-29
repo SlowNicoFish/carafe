@@ -1,21 +1,27 @@
 #pragma once
 
-#include "gamemodel.h"
-#include "storage.h"
+#include "glibrary.h"
+#include "launchmgr.h"
+#include "protonmgr.h"
 #include "settings.h"
-#include "proton.h"
 #include "steamgrid.h"
 
 #include <QObject>
 #include <QObjectBindableProperty>
 #include <QQmlEngine>
 #include <QMap>
-#include <QProcess>
+#include <QUuid>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
 
-class Launcher : public QObject
-{
+/**
+ * QML-facing facade ("Backend") that wires together the game library, Proton
+ * discovery, process launching, settings, and SteamGrid artwork fetching.
+ *
+ * Individual concerns live in GameLibrary, ProtonManager, and LaunchManager;
+ * this class coordinates them and adapts results into the signals QML consumes.
+ */
+class Launcher : public QObject {
     Q_OBJECT
     QML_NAMED_ELEMENT(Backend)
     QML_SINGLETON
@@ -44,12 +50,12 @@ public:
         return inst;
     }
 
-    GameModel   *gameModel();
-    QStringList  protonBuilds() const;
-    QString      defaultProton() const;
-    QString      steamgridApiKey();
-    QString      defaultLaunchArgs() const;
-    QString      defaultWrapperCommand() const;
+    GameModel *gameModel();
+    QStringList protonBuilds() const;
+    QString defaultProton() const;
+    QString steamgridApiKey();
+    QString defaultLaunchArgs() const;
+    QString defaultWrapperCommand() const;
 
     QBindable<QStringList> bindableProtonBuilds() { return &m_protonBuilds; }
     QBindable<QString> bindableDefaultProton() { return &m_defaultProton; }
@@ -58,31 +64,25 @@ public:
     QBindable<QString> bindableDefaultWrapperCommand() { return &m_defaultWrapperCommand; }
 
     Q_INVOKABLE static QString urlToLocalFile(const QUrl &url);
-    Q_INVOKABLE static QUrl   localFileToUrl(const QString &path);
+    Q_INVOKABLE static QUrl localFileToUrl(const QString &path);
     Q_INVOKABLE void loadLibrary();
     Q_INVOKABLE bool saveLibrary() const;
     Q_INVOKABLE void reloadProtonBuilds();
     Q_INVOKABLE QString suggestPrefix(const QString &title) const;
-    Q_INVOKABLE bool addGame(const QString &title,
-                             const QString &exePath,
-                             const QString &prefixPath,
-                             const QString &protonVersion,
-                             const QString &umuId,
-                             const QString &gridPath = {},
-                             const QString &iconPath = {},
-                             const QString &wrapperCommand = {});
+    Q_INVOKABLE bool addGame(const QString &title, const QString &exePath, const QString &prefixPath,
+                             const QString &protonVersion, const QString &umuId, const QString &gridPath = {},
+                             const QString &steamgridIconPath = {}, const QString &wrapperCommand = {});
     Q_INVOKABLE bool updateGame(const QString &gameId, const QVariantMap &fields);
     Q_INVOKABLE bool removeGame(const QString &gameId, bool removePrefix = false);
-    Q_INVOKABLE QVariantMap gameById(const QString &gameId) const;
+    Q_INVOKABLE QVariantMap gameById(const QString &gameId);
     Q_INVOKABLE bool launchGame(const QString &gameId);
     Q_INVOKABLE void fetchGrid(const QString &gameId, const QString &apiKey);
     Q_INVOKABLE void fetchIcon(const QString &gameId, const QString &apiKey);
     Q_INVOKABLE void fetchGridArtwork(const QString &gameName);
     Q_INVOKABLE void fetchIconArtwork(const QString &gameName);
     Q_INVOKABLE bool saveSettings(const QVariantMap &settings);
-    Q_INVOKABLE void runInstaller(const QString &installerPath,
-                                   const QString &prefixPath,
-                                   const QString &protonVersion);
+    Q_INVOKABLE void runInstaller(const QString &installerPath, const QString &prefixPath,
+                                  const QString &protonVersion);
     Q_INVOKABLE void runExeInPrefix(const QString &gameId, const QString &exePath);
     Q_INVOKABLE QString importImage(const QString &sourcePath, const QString &gameId, const QString &suffix);
 
@@ -103,18 +103,16 @@ Q_SIGNALS:
     void runExeInPrefixFinished(bool success, const QString &message);
 
 private:
-    void    setSettings(const AppSettings &settings);
-    QString resolveProtonPath(const QString &versionName) const;
-    void    triggerIconExtraction(const QUuid &gameId, const QString &exePath);
+    void setSettings(const AppSettings &settings);
+    void connectSteamGrid();
 
-    GameModel           m_gameModel;
-    Storage             m_storage;
-    SettingsStore       m_settingsStore;
+    GameLibrary m_games;
+    ProtonManager m_proton;
+    LaunchManager m_launch;
+    SettingsStore m_settingsStore;
     SteamGrid m_steamGrid;
     bool m_apiKeyLoaded = false;
-    QList<ProtonBuild>  m_discoveredProtonBuilds;
-    QMap<QUuid, QProcess*>  m_runningGames;
-    QMap<QUuid, QString>    m_previewRequests;
+    QMap<QUuid, QString> m_previewRequests;
 
     Q_OBJECT_BINDABLE_PROPERTY(Launcher, QStringList, m_protonBuilds, &Launcher::protonBuildsChanged)
     Q_OBJECT_BINDABLE_PROPERTY(Launcher, QString, m_defaultProton, &Launcher::defaultProtonChanged)

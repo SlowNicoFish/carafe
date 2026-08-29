@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Improved how games launch and how Proton/UMU settings are resolved.
+- Refactored the code to be more readable
 - The grid/list view choice is remembered across restarts.
 - Error notifications stay visible longer (8s vs 4s)
 - Consistent menu labels and icons.
