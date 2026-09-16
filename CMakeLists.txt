@@ -27,6 +27,7 @@ include(KDEGitCommitHooks)
 
 find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS
     Core
+    Test
     Gui
     Qml
     Quick
@@ -52,6 +53,7 @@ find_package(KF6 ${KF_MIN_VERSION} QUIET COMPONENTS Wallet)
 ecm_find_qmlmodule(org.kde.kirigami REQUIRED)
 
 add_subdirectory(src)
+add_subdirectory(tests)
 
 install(FILES res/io.marlonn.carafe.desktop      DESTINATION ${KDE_INSTALL_APPDIR})
 install(FILES res/io.marlonn.carafe.metainfo.xml DESTINATION ${KDE_INSTALL_METAINFODIR})

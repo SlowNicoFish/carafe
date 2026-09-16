@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSaveFile>
+#include <QSet>
 #include <QStandardPaths>
 using namespace Qt::Literals::StringLiterals;
 
@@ -33,6 +34,22 @@ void Storage::quarantineLibrary() const {
         qWarning() << "Could not quarantine corrupt library file:" << path;
 }
 
+void Storage::quarantineInvalidRecords(const QJsonArray &records) const {
+    if (records.isEmpty())
+        return;
+
+    const QString path = libraryPath() + u".invalid"_s;
+    QSaveFile f(path);
+    if (!f.open(QIODevice::WriteOnly)) {
+        qWarning() << "Could not write invalid library records to" << path;
+        return;
+    }
+    if (!f.write(QJsonDocument(records).toJson()) || !f.commit())
+        qWarning() << "Could not commit invalid library records to" << path;
+    else
+        qWarning() << "Preserved invalid library records in" << path;
+}
+
 QList<Game> Storage::loadLibrary() const {
     QFile f(libraryPath());
     if (!f.open(QIODevice::ReadOnly))
@@ -53,13 +70,22 @@ QList<Game> Storage::loadLibrary() const {
     }
 
     QList<Game> games;
+    QSet<QUuid> ids;
+    QJsonArray invalid;
     for (const QJsonValue &val : doc.array()) {
-        if (val.isObject()) {
-            Game g = Game::fromJson(val.toObject());
-            if (g.isValid())
-                games.append(g);
+        if (!val.isObject()) {
+            invalid.append(val);
+            continue;
         }
+        Game g = Game::fromJson(val.toObject());
+        if (!g.isValid() || ids.contains(g.id)) {
+            invalid.append(val);
+            continue;
+        }
+        ids.insert(g.id);
+        games.append(g);
     }
+    quarantineInvalidRecords(invalid);
     return games;
 }
 

@@ -26,6 +26,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Failed library writes now keep dialogs open and report errors, prefix deletion is restricted to Carafe-managed prefixes.
+- Sometimes the proton version was not shown in settings.
+- Queued icon extraction requests are preserved and stale extraction results are ignored.
 - "Fetch Artwork" no longer gets stuck on failure and shows the error in the dialog.
 - Games without artwork show the placeholder in list view instead of a blank icon.
 - Removing a running game no longer freezes the window.

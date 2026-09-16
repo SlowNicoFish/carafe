@@ -45,8 +45,8 @@ void Launcher::connectSteamGrid() {
             game.steamgridIconPath = path;
         else
             game.gridPath = path;
-        m_games.model()->updateGame(game);
-        m_games.save();
+        if (!m_games.updateGame(game))
+            Q_EMIT toastMessage(m_games.lastError());
     };
     auto onAssetError = [this](const QUuid &gameId, const QString &error, bool isIcon) {
         if (auto it = m_previewRequests.find(gameId); it != m_previewRequests.end()) {
@@ -133,8 +133,10 @@ bool Launcher::addGame(const QString &title, const QString &exePath, const QStri
         resolvedPrefix = suggestPrefix(title);
 
     Game game = Game::create(title, exePath, resolvedPrefix);
-    if (!game.isValid())
+    if (!game.isValid()) {
+        Q_EMIT toastMessage(u"The game details are incomplete."_s);
         return false;
+    }
 
     game.protonVersion = protonVersion.isEmpty() ? defaultProton() : protonVersion;
     game.protonPath = m_proton.resolvePath(game.protonVersion);
@@ -144,7 +146,10 @@ bool Launcher::addGame(const QString &title, const QString &exePath, const QStri
     game.gridPath = gridPath;
     game.steamgridIconPath = steamgridIconPath;
 
-    return m_games.addGame(game);
+    const bool saved = m_games.addGame(game);
+    if (!saved)
+        Q_EMIT toastMessage(m_games.lastError());
+    return saved;
 }
 
 // QML-facing: accepts a map with only the fields that should change.
@@ -153,12 +158,16 @@ bool Launcher::addGame(const QString &title, const QString &exePath, const QStri
 // game value if absent/empty; protonVersion is kept if omitted or empty.
 bool Launcher::updateGame(const QString &gameId, const QVariantMap &fields) {
     const QUuid uuid(gameId);
-    if (uuid.isNull())
+    if (uuid.isNull()) {
+        Q_EMIT toastMessage(u"Invalid game identifier."_s);
         return false;
+    }
 
     Game game = m_games.model()->gameById(uuid);
-    if (!game.isValid())
+    if (!game.isValid()) {
+        Q_EMIT toastMessage(u"Game not found."_s);
         return false;
+    }
 
     const QString newExePath = fields.value(u"exePath"_s, game.exePath).toString();
     const QString newProtonVersion = fields.value(u"protonVersion"_s, game.protonVersion).toString();
@@ -178,7 +187,10 @@ bool Launcher::updateGame(const QString &gameId, const QVariantMap &fields) {
     game.gridPath = fields.value(u"gridPath"_s, game.gridPath).toString();
     game.steamgridIconPath = fields.value(u"steamgridIconPath"_s, game.steamgridIconPath).toString();
 
-    return m_games.updateGame(game);
+    const bool saved = m_games.updateGame(game);
+    if (!saved)
+        Q_EMIT toastMessage(m_games.lastError());
+    return saved;
 }
 
 bool Launcher::removeGame(const QString &gameId, bool removePrefix) {
@@ -187,7 +199,10 @@ bool Launcher::removeGame(const QString &gameId, bool removePrefix) {
         return false;
 
     m_launch.stop(uuid);
-    return m_games.removeGame(uuid, removePrefix);
+    const bool removed = m_games.removeGame(uuid, removePrefix);
+    if (!removed)
+        Q_EMIT toastMessage(m_games.lastError());
+    return removed;
 }
 
 QVariantMap Launcher::gameById(const QString &gameId) {
@@ -219,11 +234,19 @@ bool Launcher::launchGame(const QString &gameId) {
         return false;
     }
 
+    reloadProtonBuilds();
+    const QString protonPath = m_proton.resolvePath(game.protonVersion);
+    if (!game.protonVersion.isEmpty() && protonPath.isEmpty()) {
+        Q_EMIT gameLaunchFailed(gameId,
+                                u"The selected Proton version is no longer available: %1"_s.arg(game.protonVersion));
+        return false;
+    }
+
     LaunchManager::Spec spec;
     spec.gameUuid = uuid;
     spec.umuId = game.umuId;
     spec.prefixPath = game.prefixPath;
-    spec.protonPath = game.protonPath;
+    spec.protonPath = protonPath;
     spec.exePath = game.exePath;
     spec.wrapperCommand = game.wrapperCommand;
     if (!game.launchArgs.trimmed().isEmpty())
@@ -299,6 +322,7 @@ void Launcher::runInstaller(const QString &installerPath, const QString &prefixP
         return;
     }
 
+    reloadProtonBuilds();
     const QString resolved = m_proton.resolvePath(protonVersion);
 
     LaunchManager::Spec spec;
@@ -332,10 +356,18 @@ void Launcher::runExeInPrefix(const QString &gameId, const QString &exePath) {
         return;
     }
 
+    reloadProtonBuilds();
+    const QString protonPath = m_proton.resolvePath(game.protonVersion);
+    if (!game.protonVersion.isEmpty() && protonPath.isEmpty()) {
+        Q_EMIT runExeInPrefixFinished(
+            false, u"The selected Proton version is no longer available: %1"_s.arg(game.protonVersion));
+        return;
+    }
+
     LaunchManager::Spec spec;
     spec.umuId = game.umuId;
     spec.prefixPath = game.prefixPath;
-    spec.protonPath = game.protonPath;
+    spec.protonPath = protonPath;
     spec.exePath = exePath;
     spec.wrapperCommand = game.wrapperCommand;
     spec.successMessage = u"Executable finished successfully."_s;
@@ -355,8 +387,10 @@ bool Launcher::saveSettings(const QVariantMap &settings) {
     s.defaultLaunchArgs = settings.value(u"defaultLaunchArgs"_s).toString();
     s.defaultWrapperCommand = settings.value(u"defaultWrapperCommand"_s).toString();
 
-    if (!m_settingsStore.save(s))
+    if (!m_settingsStore.save(s)) {
+        Q_EMIT toastMessage(u"Could not save settings."_s);
         return false;
+    }
 
     setSettings(s);
     reloadProtonBuilds();

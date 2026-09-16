@@ -13,12 +13,12 @@ A KDE Plasma-native game launcher for Windows games via Proton/UMU. Built with Q
 
 ### Dependencies
 
-Dependencies: CMake 4.3+, Clang, `openmp` (LLVM OpenMP runtime, required by Kirigami when building with Clang), Qt 6.6+, KF6 (Kirigami, CoreAddons), KF6 Wallet (optional), `icoutils` (optional), `umu-launcher` (optional).
+Dependencies: CMake 4.3+, Clang, `openmp` (LLVM OpenMP runtime, required by Kirigami when building with Clang), Qt 6.6+, KF6 (Kirigami, CoreAddons), KDE `union` (for the Union QtQuick style), KF6 Wallet (optional), `icoutils` (optional), `umu-launcher` (optional).
 
 #### Arch Deps
 
 ```bash
-sudo pacman -S --needed openmp cmake extra-cmake-modules umu-launcher ninja icoutils just vulkan-headers clang
+sudo pacman -S --needed openmp cmake extra-cmake-modules union umu-launcher ninja icoutils just vulkan-headers clang
 ```
 
 This project supports a `just` workflow for debug/release configuration, building, and installing.

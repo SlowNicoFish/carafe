@@ -50,6 +50,8 @@ public:
     /** Removes the game, optionally deleting its prefix directory. Persists. */
     bool removeGame(const QUuid &id, bool removePrefix);
 
+    QString lastError() const { return m_lastError; }
+
     /** Copies an image into the app's asset folder for the given game. */
     QString importImage(const QString &sourcePath, const QString &gameId, const QString &suffix) const;
 
@@ -58,9 +60,13 @@ public:
 
 private:
     void startIconExtraction(const QUuid &gameId, const QString &exePath);
+    void setError(const QString &error);
+    static QString managedPrefixRoot();
+    static bool removeManagedPrefix(const QString &path, QString *error);
 
     GameModel m_model;
     Storage m_storage;
     QHash<QUuid, QString> m_pendingIconExtractions;
     QSet<QUuid> m_runningIconExtractions;
+    QString m_lastError;
 };

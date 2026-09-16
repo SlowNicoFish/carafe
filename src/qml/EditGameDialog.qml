@@ -173,7 +173,7 @@ Kirigami.Dialog {
                     validationMessage.visible = true;
                     return;
                 }
-                Backend.updateGame(dialog.gameId, {
+                if (Backend.updateGame(dialog.gameId, {
                     title: titleField.text.trim(),
                     exePath: exeField.text.trim(),
                     launchArgs: launchArgsField.text,
@@ -183,8 +183,8 @@ Kirigami.Dialog {
                     umuId: umuField.text.trim(),
                     gridPath: dialog._gridPath,
                     steamgridIconPath: dialog._iconPath
-                });
-                dialog.close();
+                }))
+                    dialog.close();
             }
         },
         Kirigami.Action {

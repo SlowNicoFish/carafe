@@ -10,6 +10,7 @@ Kirigami.Dialog {
     property bool revealApiKey: false
 
     onOpened: {
+        Backend.reloadProtonBuilds();
         defaultProtonCombo.currentIndex = defaultProtonCombo.find(Backend.defaultProton ?? "");
         apiKeyField.text = Backend.steamgridApiKey ?? "";
         defaultArgsField.text = Backend.defaultLaunchArgs ?? "";
@@ -21,13 +22,15 @@ Kirigami.Dialog {
             text: "Save"
             icon.name: "document-save"
             onTriggered: {
-                Backend.saveSettings({
-                    defaultProton: defaultProtonCombo.currentIndex >= 0 ? defaultProtonCombo.currentText : "",
+                if (Backend.saveSettings({
+                    defaultProton: defaultProtonCombo.currentIndex >= 0
+                        ? defaultProtonCombo.currentText
+                        : (Backend.defaultProton ?? ""),
                     steamgridApiKey: apiKeyField.text,
                     defaultLaunchArgs: defaultArgsField.text,
                     defaultWrapperCommand: defaultWrapperField.text
-                });
-                dialog.close();
+                }))
+                    dialog.close();
             }
         },
         Kirigami.Action {

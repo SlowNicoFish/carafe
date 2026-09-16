@@ -24,9 +24,7 @@ QString extractIcon(const QUuid &gameId, const QString &exePath) {
     const QString gameIdStr = gameId.toString(QUuid::WithoutBraces);
     const QString finalPngPath = dirPath + u"/%1.png"_s.arg(gameIdStr);
 
-    if (QFile::exists(finalPngPath)) {
-        return finalPngPath;
-    }
+    QFile::remove(finalPngPath);
 
     // Step 1: Run wrestool to extract ICO data from exe.
     // Large executables can take a while; allow up to 30 seconds before giving up.

@@ -203,15 +203,15 @@ Kirigami.Dialog {
                     validationMessage.visible = true
                     return
                 }
-                Backend.addGame(titleField.text.trim(),
-                                exeField.text.trim(),
-                                prefixField.text.trim(),
-                                protonCombo.currentIndex >= 0 ? protonCombo.currentText : "",
-                                "",
-                                dialog._previewGridPath,
-                                dialog._previewIconPath,
-                                wrapperField.text.trim())
-                 dialog.close()
+                if (Backend.addGame(titleField.text.trim(),
+                                    exeField.text.trim(),
+                                    prefixField.text.trim(),
+                                    protonCombo.currentIndex >= 0 ? protonCombo.currentText : "",
+                                    "",
+                                    dialog._previewGridPath,
+                                    dialog._previewIconPath,
+                                    wrapperField.text.trim()))
+                    dialog.close()
             }
         },
         Kirigami.Action {

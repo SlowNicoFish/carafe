@@ -156,16 +156,16 @@ Kirigami.ApplicationWindow {
                 text: "Remove Only"
                 icon.name: "list-remove"
                 onTriggered: {
-                    Backend.removeGame(removeGameDialog.gameId, false);
-                    removeGameDialog.close();
+                    if (Backend.removeGame(removeGameDialog.gameId, false))
+                        removeGameDialog.close();
                 }
             },
             Kirigami.Action {
                 text: "Remove & Delete Prefix"
                 icon.name: "edit-delete"
                 onTriggered: {
-                    Backend.removeGame(removeGameDialog.gameId, true);
-                    removeGameDialog.close();
+                    if (Backend.removeGame(removeGameDialog.gameId, true))
+                        removeGameDialog.close();
                 }
             }
         ]

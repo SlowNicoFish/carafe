@@ -61,24 +61,49 @@ QString GameLibrary::suggestPrefix(const QString &title) const {
 }
 
 bool GameLibrary::addGame(Game game) {
-    if (!game.isValid())
+    m_lastError.clear();
+    if (!game.isValid()) {
+        setError(u"The game details are incomplete."_s);
         return false;
+    }
 
+    QList<Game> candidate = m_model.games();
+    candidate.append(game);
+    if (!m_storage.saveLibrary(candidate)) {
+        setError(u"Could not save the game library."_s);
+        return false;
+    }
     m_model.addGame(game);
     triggerIconExtraction(game.id, game.exePath);
-    return save();
+    return true;
 }
 
 bool GameLibrary::updateGame(const Game &game) {
+    m_lastError.clear();
     const QUuid id = game.id;
-    if (id.isNull())
+    if (id.isNull()) {
+        setError(u"Invalid game identifier."_s);
         return false;
+    }
 
     const Game existing = m_model.gameById(id);
-    if (!existing.isValid())
+    if (!existing.isValid()) {
+        setError(u"Game not found."_s);
         return false;
+    }
 
     const bool exeChanged = (existing.exePath != game.exePath);
+    QList<Game> candidate = m_model.games();
+    for (Game &stored : candidate) {
+        if (stored.id == id) {
+            stored = game;
+            break;
+        }
+    }
+    if (!m_storage.saveLibrary(candidate)) {
+        setError(u"Could not save the game library."_s);
+        return false;
+    }
     m_model.updateGame(game);
 
     if (exeChanged)
@@ -88,19 +113,87 @@ bool GameLibrary::updateGame(const Game &game) {
 }
 
 bool GameLibrary::removeGame(const QUuid &id, bool removePrefix) {
-    if (id.isNull())
+    m_lastError.clear();
+    if (id.isNull()) {
+        setError(u"Invalid game identifier."_s);
         return false;
-
-    const Game game = m_model.gameById(id);
-    m_model.removeGame(id);
-
-    if (removePrefix && game.isValid() && !game.prefixPath.isEmpty()) {
-        QDir prefixDir(game.prefixPath);
-        if (prefixDir.exists())
-            prefixDir.removeRecursively();
     }
 
-    return save();
+    const Game game = m_model.gameById(id);
+    if (!game.isValid()) {
+        setError(u"Game not found."_s);
+        return false;
+    }
+
+    if (removePrefix && !game.prefixPath.isEmpty()) {
+        const QFileInfo prefixInfo(game.prefixPath);
+        if (!prefixInfo.exists()) {
+            setError(u"The prefix path does not exist: %1"_s.arg(game.prefixPath));
+            return false;
+        }
+        if (!prefixInfo.isDir()) {
+            setError(u"The configured prefix path is not a directory."_s);
+            return false;
+        }
+        const QFileInfo rootInfo(managedPrefixRoot());
+        if (rootInfo.canonicalFilePath().isEmpty() || prefixInfo.canonicalFilePath().isEmpty()) {
+            setError(u"The prefix path must exist and resolve to a real directory."_s);
+            return false;
+        }
+        const QString relative = QDir(rootInfo.canonicalFilePath()).relativeFilePath(prefixInfo.canonicalFilePath());
+        if (relative.isEmpty() || relative == u"."_s || relative == u".."_s || relative.startsWith(u"../"_s) ||
+            QDir::isAbsolutePath(relative)) {
+            setError(u"Only prefixes inside %1 can be deleted."_s.arg(rootInfo.canonicalFilePath()));
+            return false;
+        }
+    }
+
+    QList<Game> candidate = m_model.games();
+    candidate.removeIf([&](const Game &stored) { return stored.id == id; });
+    if (!m_storage.saveLibrary(candidate)) {
+        setError(u"Could not save the game library."_s);
+        return false;
+    }
+    m_model.removeGame(id);
+
+    if (removePrefix && !game.prefixPath.isEmpty()) {
+        QString error;
+        if (!removeManagedPrefix(game.prefixPath, &error)) {
+            setError(u"Game removed, but the prefix could not be deleted: %1"_s.arg(error));
+            return false;
+        }
+    }
+    return true;
+}
+
+void GameLibrary::setError(const QString &error) {
+    m_lastError = error;
+}
+
+QString GameLibrary::managedPrefixRoot() {
+    return QDir::homePath() + u"/carafe/prefixes"_s;
+}
+
+bool GameLibrary::removeManagedPrefix(const QString &path, QString *error) {
+    const QFileInfo rootInfo(managedPrefixRoot());
+    const QFileInfo selectedInfo(path);
+    const QString root = rootInfo.canonicalFilePath();
+    const QString selected = selectedInfo.canonicalFilePath();
+    if (root.isEmpty() || selected.isEmpty()) {
+        *error = u"The prefix path must exist and resolve to a real directory."_s;
+        return false;
+    }
+    const QString relative = QDir(root).relativeFilePath(selected);
+    if (relative.isEmpty() || relative == u"."_s || relative == u".."_s || relative.startsWith(u"../"_s) ||
+        QDir::isAbsolutePath(relative)) {
+        *error = u"Only prefixes inside %1 can be deleted."_s.arg(root);
+        return false;
+    }
+    if (!selectedInfo.isDir() || !QDir(selected).removeRecursively()) {
+        *error = u"Could not delete %1."_s.arg(selected);
+        return false;
+    }
+    return true;
 }
 
 QString GameLibrary::importImage(const QString &sourcePath, const QString &gameId, const QString &suffix) const {
@@ -151,19 +244,30 @@ void GameLibrary::startIconExtraction(const QUuid &gameId, const QString &exePat
             if (!guard)
                 return;
 
+            const QString next = guard->m_pendingIconExtractions.value(gameId);
             guard->m_runningIconExtractions.remove(gameId);
             guard->m_pendingIconExtractions.remove(gameId);
 
             if (!path.isEmpty()) {
                 Game game = guard->m_model.gameById(gameId);
-                if (game.isValid()) {
-                    game.iconPath = path;
-                    guard->m_model.updateGame(game);
-                    guard->save();
+                if (game.isValid() && game.exePath == exePath) {
+                    QList<Game> candidate = guard->m_model.games();
+                    for (Game &stored : candidate) {
+                        if (stored.id == gameId) {
+                            stored.iconPath = path;
+                            break;
+                        }
+                    }
+                    if (!guard->m_storage.saveLibrary(candidate)) {
+                        guard->setError(u"Could not save the extracted game icon."_s);
+                    } else {
+                        game.iconPath = path;
+                        guard->m_model.updateGame(game);
+                    }
                 }
             }
 
-            if (const QString next = guard->m_pendingIconExtractions.value(gameId); !next.isEmpty())
+            if (!next.isEmpty())
                 guard->startIconExtraction(gameId, next);
         });
     });

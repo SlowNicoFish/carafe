@@ -4,6 +4,7 @@
 
 #include <QList>
 #include <QObject>
+#include <QJsonArray>
 
 /**
  * Persists the game library to
@@ -21,4 +22,5 @@ public:
 private:
     static QString libraryPath();
     void quarantineLibrary() const;
+    void quarantineInvalidRecords(const QJsonArray &records) const;
 };
