@@ -55,5 +55,5 @@ public:
 
 private:
     QMap<QUuid, QProcess *> m_runningGames;
-    QSet<QUuid> m_stopped;
+    QSet<QProcess *> m_stoppedProcesses;
 };

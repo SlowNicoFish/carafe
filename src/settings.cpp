@@ -46,14 +46,14 @@ static QString readKeyFromWallet(KWallet::Wallet *wallet) {
     return value;
 }
 
-static void writeKeyToWallet(KWallet::Wallet *wallet, const QString &key) {
+static bool writeKeyToWallet(KWallet::Wallet *wallet, const QString &key) {
     if (!wallet->hasFolder(walletFolder()) && !wallet->createFolder(walletFolder()))
-        return;
-    wallet->setFolder(walletFolder());
+        return false;
+    if (!wallet->setFolder(walletFolder()))
+        return false;
     if (key.isEmpty())
-        wallet->removeEntry(u"steamgridApiKey"_s);
-    else
-        wallet->writePassword(u"steamgridApiKey"_s, key);
+        return wallet->removeEntry(u"steamgridApiKey"_s) == 0;
+    return wallet->writePassword(u"steamgridApiKey"_s, key) == 0;
 }
 
 #endif
@@ -111,7 +111,9 @@ bool SettingsStore::writeSettingsFile(const QJsonObject &obj) {
     if (!f.open(QIODevice::WriteOnly))
         return false;
 
-    f.write(QJsonDocument(obj).toJson());
+    const QByteArray data = QJsonDocument(obj).toJson();
+    if (f.write(data) != data.size())
+        return false;
     return f.commit();
 }
 
@@ -119,8 +121,10 @@ bool SettingsStore::save(const AppSettings &s) const {
 #ifdef HAVE_KWALLET
     if (hasWallet()) {
         if (KWallet::Wallet *wallet = openWallet()) {
-            writeKeyToWallet(wallet, s.steamgridApiKey);
+            const bool keySaved = writeKeyToWallet(wallet, s.steamgridApiKey);
             delete wallet;
+            if (!keySaved)
+                return false;
 
             // The key lives in the keyring; only persist a presence marker so
             // the plaintext key never lands in the JSON file.

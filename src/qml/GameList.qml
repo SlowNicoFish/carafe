@@ -47,6 +47,10 @@ Item {
             width: ListView.view.width
             gameId:     model.gameId
             title:      model.title
+            onSelectRequested: itemIndex => {
+                listView.currentIndex = itemIndex
+                listView.forceActiveFocus()
+            }
             iconSource: {
                 const p = model.steamgridIconPath || model.iconPath
                 return p ? Backend.localFileToUrl(p) : ""

@@ -6,18 +6,18 @@ qt_add_executable(carafe
     gamemodel.cpp
     proton.h
     proton.cpp
-    protonmgr.h
-    protonmgr.cpp
+    protonmanager.h
+    protonmanager.cpp
     shellargs.h
     shellargs.cpp
     settings.h
     settings.cpp
     storage.h
     storage.cpp
-    glibrary.h
-    glibrary.cpp
-    launchmgr.h
-    launchmgr.cpp
+    gamelibrary.h
+    gamelibrary.cpp
+    launchmanager.h
+    launchmanager.cpp
     launcher.h
     launcher.cpp
     steamgrid.h
@@ -68,6 +68,7 @@ qt_add_qml_module(carafe
         qml/EditGameDialog.qml
         qml/SettingsDialog.qml
         qml/ContextMenu.qml
+        qml/GameActions.qml
     NO_RESOURCE_TARGET_PATH
 )
 

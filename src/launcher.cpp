@@ -262,26 +262,29 @@ bool Launcher::launchGame(const QString &gameId) {
     return true;
 }
 
-void Launcher::fetchGrid(const QString &gameId, const QString &apiKey) {
+Game Launcher::gameForId(const QString &gameId, QUuid *uuid) const {
+    *uuid = QUuid(gameId);
+    if (uuid->isNull())
+        return {};
+    return m_games.model()->gameById(*uuid);
+}
+
+void Launcher::fetchArtwork(const QString &gameId, const QString &apiKey, bool icon) {
     if (apiKey.trimmed().isEmpty())
         return;
-    const QUuid uuid(gameId);
-    if (uuid.isNull())
-        return;
-    const Game game = m_games.model()->gameById(uuid);
+
+    QUuid uuid;
+    const Game game = gameForId(gameId, &uuid);
     if (game.isValid())
-        m_steamGrid.fetchGrid(game.title, uuid, apiKey);
+        icon ? m_steamGrid.fetchIcon(game.title, uuid, apiKey) : m_steamGrid.fetchGrid(game.title, uuid, apiKey);
+}
+
+void Launcher::fetchGrid(const QString &gameId, const QString &apiKey) {
+    fetchArtwork(gameId, apiKey, false);
 }
 
 void Launcher::fetchIcon(const QString &gameId, const QString &apiKey) {
-    if (apiKey.trimmed().isEmpty())
-        return;
-    const QUuid uuid(gameId);
-    if (uuid.isNull())
-        return;
-    const Game game = m_games.model()->gameById(uuid);
-    if (game.isValid())
-        m_steamGrid.fetchIcon(game.title, uuid, apiKey);
+    fetchArtwork(gameId, apiKey, true);
 }
 
 void Launcher::fetchGridArtwork(const QString &gameName) {
@@ -324,6 +327,10 @@ void Launcher::runInstaller(const QString &installerPath, const QString &prefixP
 
     reloadProtonBuilds();
     const QString resolved = m_proton.resolvePath(protonVersion);
+    if (!protonVersion.isEmpty() && resolved.isEmpty()) {
+        Q_EMIT installerFinished(false, u"The selected Proton version is no longer available: %1"_s.arg(protonVersion));
+        return;
+    }
 
     LaunchManager::Spec spec;
     spec.prefixPath = resolvedPrefix;

@@ -81,8 +81,14 @@ void SteamGrid::onSearchReply(QNetworkReply *reply, const QString &endpoint, con
         return;
     }
 
-    const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
-    const QJsonArray data = doc[u"data"_s].toArray();
+    QJsonParseError parseError;
+    const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !doc.isObject() || !doc.object()[u"data"_s].isArray()) {
+        const QString err = u"Search returned an invalid response."_s;
+        isIcon ? Q_EMIT iconError(gameId, err) : Q_EMIT gridError(gameId, err);
+        return;
+    }
+    const QJsonArray data = doc.object()[u"data"_s].toArray();
 
     if (data.isEmpty()) {
         const QString err = u"No games found for '%1'"_s.arg(gameName);
@@ -127,8 +133,14 @@ void SteamGrid::onAssetListReply(QNetworkReply *reply, const QUuid &gameId, cons
         return;
     }
 
-    const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
-    const QJsonArray data = doc[u"data"_s].toArray();
+    QJsonParseError parseError;
+    const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !doc.isObject() || !doc.object()[u"data"_s].isArray()) {
+        const QString err = u"Asset request returned an invalid response."_s;
+        isIcon ? Q_EMIT iconError(gameId, err) : Q_EMIT gridError(gameId, err);
+        return;
+    }
+    const QJsonArray data = doc.object()[u"data"_s].toArray();
 
     if (data.isEmpty()) {
         const QString err = u"No %1 images found for '%2'"_s.arg(suffix, gameName);
@@ -184,7 +196,11 @@ void SteamGrid::onImageReply(QNetworkReply *reply, const QString &imageUrl, cons
         isIcon ? Q_EMIT iconError(gameId, err) : Q_EMIT gridError(gameId, err);
         return;
     }
-    f.write(data);
+    if (f.write(data) != data.size()) {
+        const QString err = u"Failed to write image to disk: %1"_s.arg(path);
+        isIcon ? Q_EMIT iconError(gameId, err) : Q_EMIT gridError(gameId, err);
+        return;
+    }
     if (!f.commit()) {
         const QString err = u"Failed to write image to disk: %1"_s.arg(path);
         isIcon ? Q_EMIT iconError(gameId, err) : Q_EMIT gridError(gameId, err);

@@ -22,14 +22,14 @@ Item {
     signal runExeInPrefixRequested()
     signal selectRequested()
 
-    ContextMenu {
-        id: contextMenu
+    GameActions {
+        id: actions
         gameId: cardRoot.gameId
         onLaunchRequested: cardRoot.launchRequested()
         onEditRequested: cardRoot.editRequested()
         onDeleteRequested: cardRoot.deleteRequested()
         onFetchArtworkRequested: cardRoot.fetchArtworkRequested()
-        onRunExeRequested: cardRoot.runExeInPrefixRequested()
+        onRunExeInPrefixRequested: cardRoot.runExeInPrefixRequested()
     }
 
     MouseArea {
@@ -41,7 +41,7 @@ Item {
             if (mouse.button === Qt.LeftButton)
                 cardRoot.selectRequested();
             else
-                contextMenu.popup();
+                actions.popup();
         }
         onDoubleClicked: mouse => {
             if (mouse.button === Qt.LeftButton && !cardRoot.isRunning)

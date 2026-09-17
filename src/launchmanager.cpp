@@ -1,4 +1,4 @@
-#include "launchmgr.h"
+#include "launchmanager.h"
 #include "shellargs.h"
 
 #include <QTimer>
@@ -44,16 +44,13 @@ void LaunchManager::start(const Spec &spec, const std::function<void()> &onStart
     connect(process, &QProcess::started, this, [onStarted]() { onStarted(); });
 
     auto finishProcess = [this, process, tracked, uuid = spec.gameUuid]() {
-        if (tracked) {
-            if (QProcess *p = m_runningGames.take(uuid))
-                p->deleteLater();
-        } else {
-            process->deleteLater();
-        }
+        if (tracked && m_runningGames.value(uuid) == process)
+            m_runningGames.remove(uuid);
+        process->deleteLater();
     };
 
     connect(process, &QProcess::errorOccurred, this,
-            [this, tracked, uuid = spec.gameUuid, program, onTerminal, finishProcess](QProcess::ProcessError error) {
+            [this, process, tracked, program, onTerminal, finishProcess](QProcess::ProcessError error) {
                 QString message;
                 if (error == QProcess::FailedToStart)
                     message = u"Failed to start %1. Is it installed?"_s.arg(program);
@@ -64,7 +61,7 @@ void LaunchManager::start(const Spec &spec, const std::function<void()> &onStart
 
                 const bool finishedWillFollow = (error == QProcess::Crashed);
                 if (!finishedWillFollow) {
-                    if (tracked && m_stopped.remove(uuid)) {
+                    if (tracked && m_stoppedProcesses.remove(process)) {
                         finishProcess();
                         return;
                     }
@@ -74,11 +71,11 @@ void LaunchManager::start(const Spec &spec, const std::function<void()> &onStart
             });
 
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-            [this, tracked, uuid = spec.gameUuid, onTerminal, finishProcess,
+            [this, process, tracked, onTerminal, finishProcess,
              successMessage = spec.successMessage](int exitCode, QProcess::ExitStatus status) {
                 // A deliberate stop() suppresses the terminal callback so callers
                 // (e.g. removeGame) don't report the kill as a launch failure.
-                if (tracked && m_stopped.remove(uuid)) {
+                if (tracked && m_stoppedProcesses.remove(process)) {
                     finishProcess();
                     return;
                 }
@@ -95,7 +92,7 @@ void LaunchManager::stop(const QUuid &gameUuid) {
     if (!process)
         return;
 
-    m_stopped.insert(gameUuid);
+    m_stoppedProcesses.insert(process);
     connect(process, &QProcess::finished, process, &QProcess::deleteLater);
     process->terminate();
     QTimer::singleShot(1500, process, [process] {

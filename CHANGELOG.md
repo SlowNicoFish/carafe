@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Improved how games launch and how Proton/UMU settings are resolved.
 - Refactored the code to be more readable
+- Renamed manager source files to use clearer names.
 - The grid/list view choice is remembered across restarts.
 - Error notifications stay visible longer (8s vs 4s)
 - Consistent menu labels and icons.
@@ -33,6 +34,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Games without artwork show the placeholder in list view instead of a blank icon.
 - Removing a running game no longer freezes the window.
 - SteamGridDB failures report the actual cause (e.g. invalid API key) instead of "No games found".
+- Artwork fetching waits for both grid and icon requests to finish.
+- Invalid SteamGridDB responses are reported as errors.
+- Installer launches fail clearly when the selected Proton version is unavailable.
+- Settings save failures are no longer ignored.
 - A corrupt library.json is quarantined as library.json.corrupt-<timestamp> instead of being overwritten.
 - Launching an already-running game gives feedback
 
@@ -62,9 +67,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.1.1] - 2026-07-05
 
-
 ## [0.1.0] - 2026-07-05
-
 
 ### Added
 

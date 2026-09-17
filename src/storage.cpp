@@ -101,6 +101,8 @@ bool Storage::saveLibrary(const QList<Game> &games) const {
     if (!f.open(QIODevice::WriteOnly))
         return false;
 
-    f.write(QJsonDocument(arr).toJson());
+    const QByteArray data = QJsonDocument(arr).toJson();
+    if (f.write(data) != data.size())
+        return false;
     return f.commit();
 }

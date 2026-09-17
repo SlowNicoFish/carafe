@@ -5,6 +5,7 @@
 #include "storage.h"
 
 #include <QObject>
+#include <QFuture>
 #include <QHash>
 #include <QSet>
 #include <QUuid>
@@ -24,9 +25,11 @@ class GameLibrary : public QObject {
 
 public:
     explicit GameLibrary(QObject *parent = nullptr);
+    ~GameLibrary() override;
 
     /** The list model exposed to QML. */
     GameModel *model();
+    const GameModel *model() const;
 
     /** Loads the library from disk, filling missing proton versions from
      *  `defaultProton` and resolving each game's protonPath via `resolvePath`. */
@@ -62,11 +65,13 @@ private:
     void startIconExtraction(const QUuid &gameId, const QString &exePath);
     void setError(const QString &error);
     static QString managedPrefixRoot();
+    static bool validateManagedPrefix(const QString &path, QString *canonicalPath, QString *error);
     static bool removeManagedPrefix(const QString &path, QString *error);
 
     GameModel m_model;
     Storage m_storage;
     QHash<QUuid, QString> m_pendingIconExtractions;
     QSet<QUuid> m_runningIconExtractions;
+    QHash<QUuid, QFuture<void>> m_iconExtractionFutures;
     QString m_lastError;
 };

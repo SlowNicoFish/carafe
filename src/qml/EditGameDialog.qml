@@ -13,6 +13,8 @@ Kirigami.Dialog {
     property var protonBuilds: []
     property bool _fetchingArtwork: false
     property string _pendingFetchTitle: ""
+    property bool _gridArtworkDone: false
+    property bool _iconArtworkDone: false
     property string _gridPath: ""
     property string _iconPath: ""
 
@@ -156,6 +158,8 @@ Kirigami.Dialog {
                 onClicked: {
                     const title = titleField.text.trim();
                     dialog._pendingFetchTitle = title;
+                    dialog._gridArtworkDone = false;
+                    dialog._iconArtworkDone = false;
                     _fetchingArtwork = true;
                     Backend.fetchGridArtwork(title);
                     Backend.fetchIconArtwork(title);
@@ -238,25 +242,31 @@ Kirigami.Dialog {
     Connections {
         target: Backend
         function onGridPreviewReady(gameName, path) {
-            dialog._fetchingArtwork = false;
-            if (gameName === dialog._pendingFetchTitle)
+            if (gameName === dialog._pendingFetchTitle) {
+                dialog._gridArtworkDone = true;
                 dialog._gridPath = path;
+                dialog._fetchingArtwork = !dialog._gridArtworkDone || !dialog._iconArtworkDone;
+            }
         }
         function onIconPreviewReady(gameName, path) {
-            dialog._fetchingArtwork = false;
-            if (gameName === dialog._pendingFetchTitle)
+            if (gameName === dialog._pendingFetchTitle) {
+                dialog._iconArtworkDone = true;
                 dialog._iconPath = path;
+                dialog._fetchingArtwork = !dialog._gridArtworkDone || !dialog._iconArtworkDone;
+            }
         }
         function onGridPreviewFailed(gameName, error) {
-            dialog._fetchingArtwork = false;
             if (gameName === dialog._pendingFetchTitle) {
+                dialog._gridArtworkDone = true;
+                dialog._fetchingArtwork = !dialog._gridArtworkDone || !dialog._iconArtworkDone;
                 validationMessage.text = error;
                 validationMessage.visible = true;
             }
         }
         function onIconPreviewFailed(gameName, error) {
-            dialog._fetchingArtwork = false;
             if (gameName === dialog._pendingFetchTitle) {
+                dialog._iconArtworkDone = true;
+                dialog._fetchingArtwork = !dialog._gridArtworkDone || !dialog._iconArtworkDone;
                 validationMessage.text = error;
                 validationMessage.visible = true;
             }

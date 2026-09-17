@@ -1,6 +1,32 @@
 #include "gamemodel.h"
 
 #include <algorithm>
+#include <array>
+
+namespace {
+
+struct RoleInfo {
+    int role;
+    const char *name;
+};
+
+constexpr std::array<RoleInfo, 13> roleInfos = {{
+    {GameModel::IdRole, "gameId"},
+    {GameModel::TitleRole, "title"},
+    {GameModel::ExePathRole, "exePath"},
+    {GameModel::LaunchArgsRole, "launchArgs"},
+    {GameModel::WrapperCommandRole, "wrapperCommand"},
+    {GameModel::PrefixPathRole, "prefixPath"},
+    {GameModel::ProtonVersionRole, "protonVersion"},
+    {GameModel::ProtonPathRole, "protonPath"},
+    {GameModel::UmuIdRole, "umuId"},
+    {GameModel::IconPathRole, "iconPath"},
+    {GameModel::GridPathRole, "gridPath"},
+    {GameModel::SteamgridIconPathRole, "steamgridIconPath"},
+    {GameModel::IsRunningRole, "isRunning"},
+}};
+
+} // namespace
 
 GameModel::GameModel(QObject *parent)
     : QAbstractListModel(parent) {}
@@ -50,26 +76,16 @@ QVariant GameModel::data(const QModelIndex &index, int role) const {
 }
 
 QHash<int, QByteArray> GameModel::roleNames() const {
-    return {
-        {IdRole, "gameId"},
-        {TitleRole, "title"},
-        {ExePathRole, "exePath"},
-        {LaunchArgsRole, "launchArgs"},
-        {WrapperCommandRole, "wrapperCommand"},
-        {PrefixPathRole, "prefixPath"},
-        {ProtonVersionRole, "protonVersion"},
-        {ProtonPathRole, "protonPath"},
-        {UmuIdRole, "umuId"},
-        {IconPathRole, "iconPath"},
-        {GridPathRole, "gridPath"},
-        {SteamgridIconPathRole, "steamgridIconPath"},
-        {IsRunningRole, "isRunning"},
-    };
+    QHash<int, QByteArray> roles;
+    for (const RoleInfo &info : roleInfos)
+        roles.insert(info.role, info.name);
+    return roles;
 }
 
 void GameModel::setGames(const QList<Game> &games) {
     beginResetModel();
     m_games = games;
+    m_running.clear();
     endResetModel();
     Q_EMIT countChanged();
 }
@@ -101,6 +117,10 @@ void GameModel::removeGame(const QUuid &id) {
 }
 
 void GameModel::setRunning(const QUuid &id, bool running) {
+    const bool wasRunning = m_running.contains(id);
+    if (wasRunning == running)
+        return;
+
     if (running)
         m_running.insert(id);
     else

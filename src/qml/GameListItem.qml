@@ -13,27 +13,34 @@ Item {
     property bool isRunning: false
 
     signal launchRequested()
+    signal selectRequested(int itemIndex)
     signal editRequested()
     signal deleteRequested()
     signal fetchArtworkRequested()
     signal runExeInPrefixRequested()
 
-    ContextMenu {
-        id: contextMenu
+    GameActions {
+        id: actions
         gameId: listItemRoot.gameId
         onLaunchRequested: listItemRoot.launchRequested()
         onEditRequested: listItemRoot.editRequested()
         onDeleteRequested: listItemRoot.deleteRequested()
         onFetchArtworkRequested: listItemRoot.fetchArtworkRequested()
-        onRunExeRequested: listItemRoot.runExeInPrefixRequested()
+        onRunExeInPrefixRequested: listItemRoot.runExeInPrefixRequested()
     }
 
     MouseArea {
         id: interactionArea
         anchors.fill: parent
-        acceptedButtons: Qt.RightButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         hoverEnabled: true
-        onClicked: contextMenu.popup()
+        onClicked: mouse => {
+            if (mouse.button === Qt.LeftButton) {
+                listItemRoot.selectRequested(index)
+            } else {
+                actions.popup()
+            }
+        }
     }
 
     Rectangle {
@@ -81,7 +88,7 @@ Item {
                 icon.name: "open-menu-symbolic"
                 QQC2.ToolTip.text: "More actions"
                 QQC2.ToolTip.visible: hovered
-                onClicked: contextMenu.popup(menuButton, 0, menuButton.height)
+                onClicked: actions.popup(menuButton, 0, menuButton.height)
             }
         }
     }

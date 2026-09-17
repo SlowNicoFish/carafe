@@ -1,8 +1,8 @@
 #pragma once
 
-#include "glibrary.h"
-#include "launchmgr.h"
-#include "protonmgr.h"
+#include "gamelibrary.h"
+#include "launchmanager.h"
+#include "protonmanager.h"
 #include "settings.h"
 #include "steamgrid.h"
 
@@ -105,6 +105,8 @@ Q_SIGNALS:
 private:
     void setSettings(const AppSettings &settings);
     void connectSteamGrid();
+    void fetchArtwork(const QString &gameId, const QString &apiKey, bool icon);
+    Game gameForId(const QString &gameId, QUuid *uuid) const;
 
     GameLibrary m_games;
     ProtonManager m_proton;

@@ -61,7 +61,10 @@ install(FILES res/io.marlonn.carafe.svg
     DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
 
 include(KDEClangFormat)
-file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES *.cpp *.h *.hpp *.c)
+file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES CONFIGURE_DEPENDS
+    src/*.cpp src/*.h src/*.hpp src/*.c
+    tests/*.cpp tests/*.h tests/*.hpp tests/*.c
+)
 kde_clang_format(${ALL_CLANG_FORMAT_SOURCE_FILES})
 
 kde_configure_git_pre_commit_hook(CHECKS CLANG_FORMAT)

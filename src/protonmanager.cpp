@@ -1,4 +1,4 @@
-#include "protonmgr.h"
+#include "protonmanager.h"
 
 #include <algorithm>
 
