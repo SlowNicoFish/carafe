@@ -97,7 +97,6 @@ void LaunchManager::stop(const QUuid &gameUuid) {
         return;
 
     m_stoppedProcesses.insert(process);
-    connect(process, &QProcess::finished, process, &QProcess::deleteLater);
     process->terminate();
     QTimer::singleShot(1500, process, [process] {
         if (process->state() != QProcess::NotRunning)

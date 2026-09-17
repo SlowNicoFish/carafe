@@ -140,12 +140,12 @@ bool GameLibrary::removeGame(const QUuid &id, bool removePrefix) {
         return false;
     }
 
-    if (removePrefix && !game.prefixPath.isEmpty()) {
+    bool canRemovePrefix = removePrefix && !game.prefixPath.isEmpty();
+    if (canRemovePrefix) {
         QString canonicalPath;
         QString error;
         if (!validateManagedPrefix(game.prefixPath, &canonicalPath, &error)) {
-            setError(error);
-            return false;
+            canRemovePrefix = false;
         }
     }
 
@@ -158,7 +158,7 @@ bool GameLibrary::removeGame(const QUuid &id, bool removePrefix) {
     m_model.removeGame(id);
     m_pendingIconExtractions.remove(id);
 
-    if (removePrefix && !game.prefixPath.isEmpty()) {
+    if (canRemovePrefix) {
         QString error;
         if (!removeManagedPrefix(game.prefixPath, &error)) {
             setError(u"Game removed, but the prefix could not be deleted: %1"_s.arg(error));

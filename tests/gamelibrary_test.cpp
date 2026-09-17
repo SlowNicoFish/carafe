@@ -15,6 +15,7 @@ class GameLibraryTest : public QObject {
 private Q_SLOTS:
     void init();
     void updatesAndPersistsGame();
+    void removesGameWhenPrefixIsUnmanaged();
     void rejectsInvalidUpdate();
     void rejectsUnsafeImportedImagePath();
 
@@ -65,6 +66,18 @@ void GameLibraryTest::rejectsInvalidUpdate() {
 
     QVERIFY(!library.updateGame(invalid));
     QCOMPARE(library.model()->gameById(original.id).title, original.title);
+}
+
+void GameLibraryTest::removesGameWhenPrefixIsUnmanaged() {
+    GameLibrary library;
+    const Game game = Game::create(u"Unmanaged prefix"_s, u"/tmp/game.exe"_s, u"/tmp/prefix"_s);
+    QVERIFY(library.addGame(game));
+
+    QVERIFY(library.removeGame(game.id, true));
+    QVERIFY(!library.model()->gameById(game.id).isValid());
+
+    Storage storage;
+    QVERIFY(storage.loadLibrary().isEmpty());
 }
 
 void GameLibraryTest::rejectsUnsafeImportedImagePath() {

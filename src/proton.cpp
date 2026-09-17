@@ -15,6 +15,8 @@ QList<ProtonBuild> ProtonDetector::discoverBuilds() {
         home + u"/.local/share/Steam/compatibilitytools.d"_s,
         home + u"/.steam/root/compatibilitytools.d"_s,
         home + u"/.local/share/Steam/steamapps/common"_s,
+        home + u"/.var/app/com.valvesoftware.Steam/data/Steam/compatibilitytools.d"_s,
+        home + u"/.var/app/com.valvesoftware.Steam/data/Steam/steamapps/common"_s,
         u"/usr/share/steam/compatibilitytools.d"_s,
     };
 
