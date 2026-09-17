@@ -25,7 +25,32 @@
   <releases>
   <release version="0.2.0" date="2026-09-18">
     <description>
-      <p>TODO: fill in release notes</p>
+      <p>Grid cards: hover highlight, single-click select, double-click launch.</p>
+      <p>Keyboard navigation (arrow keys + Enter), scrollbars, and an empty-library message in both views.</p>
+      <p>Right-click menu for list rows</p>
+      <p>API key show/hide toggle</p>
+      <p>Minimum window size.</p>
+      <p>Improved how games launch and how Proton/UMU settings are resolved.</p>
+      <p>Refactored the code to be more readable</p>
+      <p>Renamed manager source files to use clearer names.</p>
+      <p>The grid/list view choice is remembered across restarts.</p>
+      <p>Error notifications stay visible longer (8s vs 4s)</p>
+      <p>Consistent menu labels and icons.</p>
+      <p>Artwork keeps its real file extension.</p>
+      <p>GAMEID is only sent to umu-run when a UMU ID is configured.</p>
+      <p>Failed library writes now keep dialogs open and report errors, prefix deletion is restricted to Carafe-managed prefixes.</p>
+      <p>Sometimes the proton version was not shown in settings.</p>
+      <p>Queued icon extraction requests are preserved and stale extraction results are ignored.</p>
+      <p>"Fetch Artwork" no longer gets stuck on failure and shows the error in the dialog.</p>
+      <p>Games without artwork show the placeholder in list view instead of a blank icon.</p>
+      <p>Removing a running game no longer freezes the window.</p>
+      <p>SteamGridDB failures report the actual cause (e.g. invalid API key) instead of "No games found".</p>
+      <p>Artwork fetching waits for both grid and icon requests to finish.</p>
+      <p>Invalid SteamGridDB responses are reported as errors.</p>
+      <p>Installer launches fail clearly when the selected Proton version is unavailable.</p>
+      <p>Settings save failures are no longer ignored.</p>
+      <p>A corrupt library.json is quarantined as library.json.corrupt-<timestamp> instead of being overwritten.</p>
+      <p>Launching an already-running game gives feedback</p>
     </description>
   </release>
   <release version="0.1.3" date="2026-08-17">
