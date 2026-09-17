@@ -19,10 +19,14 @@ bool LaunchManager::isRunning(const QUuid &gameUuid) const {
 
 void LaunchManager::start(const Spec &spec, const std::function<void()> &onStarted,
                           const std::function<void(bool ok, const QString &message)> &onTerminal) {
-    const QString program = QString::fromLatin1(UMU_RUN);
     const bool tracked = !spec.gameUuid.isNull();
 
+    QString program = QString::fromLatin1(UMU_RUN);
     QStringList programArgs = parseShellArgs(spec.wrapperCommand.trimmed());
+    if (!programArgs.isEmpty()) {
+        program = programArgs.takeFirst();
+        programArgs << QString::fromLatin1(UMU_RUN);
+    }
     programArgs << spec.exePath << spec.args;
 
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();

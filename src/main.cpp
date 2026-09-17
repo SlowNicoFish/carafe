@@ -14,14 +14,13 @@ int main(int argc, char *argv[]) {
     app.setDesktopFileName(QStringLiteral(APP_ID));
     app.setWindowIcon(QIcon::fromTheme(QStringLiteral(APP_ID)));
 
+    auto &launcher = Launcher::instance();
+    launcher.reloadProtonBuilds();
+
     QQmlApplicationEngine engine;
     engine.loadFromModule(u"io.marlonn.carafe"_s, u"Main"_s);
     if (engine.rootObjects().isEmpty())
         return -1;
-
-    auto &launcher = Launcher::instance();
-    launcher.reloadProtonBuilds();
-    launcher.loadLibrary();
 
     return app.exec();
 }

@@ -51,9 +51,13 @@ void Storage::quarantineInvalidRecords(const QJsonArray &records) const {
 }
 
 QList<Game> Storage::loadLibrary() const {
-    QFile f(libraryPath());
-    if (!f.open(QIODevice::ReadOnly))
+    const QString path = libraryPath();
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly)) {
+        if (QFile::exists(path))
+            qWarning() << "Could not open library file:" << path << f.errorString();
         return {};
+    }
 
     const QByteArray raw = f.readAll();
     QJsonParseError parseError;
@@ -86,6 +90,7 @@ QList<Game> Storage::loadLibrary() const {
         games.append(g);
     }
     quarantineInvalidRecords(invalid);
+    qInfo() << "Loaded" << games.size() << "games from" << path;
     return games;
 }
 

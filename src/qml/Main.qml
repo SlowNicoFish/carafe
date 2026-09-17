@@ -15,6 +15,8 @@ Kirigami.ApplicationWindow {
     minimumHeight: 480
     title: "Carafe"
 
+    Component.onCompleted: Backend.loadLibrary()
+
     Settings {
         id: uiSettings
         category: "ui"

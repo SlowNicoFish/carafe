@@ -14,8 +14,25 @@ class StorageTest : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
+    void savesAndLoadsLibrary();
     void invalidRecordsAreQuarantined();
 };
+
+void StorageTest::savesAndLoadsLibrary() {
+    QStandardPaths::setTestModeEnabled(true);
+    const QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir(directory).removeRecursively();
+
+    const Game original = Game::create(u"Saved game"_s, u"/tmp/game.exe"_s, u"/tmp/prefix"_s);
+    Storage storage;
+    QVERIFY(storage.saveLibrary({original}));
+
+    const QList<Game> loaded = storage.loadLibrary();
+    QCOMPARE(loaded.size(), 1);
+    QCOMPARE(loaded.first().id, original.id);
+    QCOMPARE(loaded.first().title, original.title);
+    QCOMPARE(loaded.first().exePath, original.exePath);
+}
 
 void StorageTest::invalidRecordsAreQuarantined() {
     QStandardPaths::setTestModeEnabled(true);

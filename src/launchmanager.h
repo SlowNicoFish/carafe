@@ -40,9 +40,9 @@ public:
     bool isRunning(const QUuid &gameUuid) const;
 
     /**
-     * Starts `umu-run <wrapper> <exePath> <args...>` with the environment
-     * derived from the spec. `onTerminal(ok, message)` is invoked exactly once,
-     * on either error or normal exit.
+     * Starts `umu-run <exePath> <args...>` through the optional host wrapper
+     * command. `onTerminal(ok, message)` is invoked exactly once, on either
+     * error or normal exit.
      */
     void start(const Spec &spec, const std::function<void()> &onStarted,
                const std::function<void(bool ok, const QString &message)> &onTerminal);

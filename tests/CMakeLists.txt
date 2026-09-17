@@ -33,3 +33,14 @@ target_include_directories(carafe_gamelibrary_tests PRIVATE ../src)
 target_link_libraries(carafe_gamelibrary_tests PRIVATE Qt6::Core Qt6::Concurrent Qt6::Test)
 
 add_test(NAME carafe_gamelibrary_tests COMMAND carafe_gamelibrary_tests)
+
+qt_add_executable(carafe_launchmanager_tests
+    launchmanager_test.cpp
+    ../src/launchmanager.cpp
+    ../src/shellargs.cpp
+)
+
+target_include_directories(carafe_launchmanager_tests PRIVATE ../src)
+target_link_libraries(carafe_launchmanager_tests PRIVATE Qt6::Core Qt6::Test)
+
+add_test(NAME carafe_launchmanager_tests COMMAND carafe_launchmanager_tests)
