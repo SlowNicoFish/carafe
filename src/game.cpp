@@ -19,8 +19,6 @@ QJsonObject Game::toJson() const {
     obj[u"wrapperCommand"_s] = wrapperCommand;
     obj[u"prefixPath"_s] = prefixPath;
     obj[u"protonVersion"_s] = protonVersion;
-    // protonPath is intentionally not persisted, it is always re-resolved from
-    // protonVersion at load time via ProtonManager::resolvePath.
     obj[u"umuId"_s] = umuId;
     obj[u"iconPath"_s] = iconPath;
     obj[u"gridPath"_s] = gridPath;
@@ -37,7 +35,6 @@ Game Game::fromJson(const QJsonObject &obj) {
     g.wrapperCommand = obj[u"wrapperCommand"_s].toString();
     g.prefixPath = obj[u"prefixPath"_s].toString();
     g.protonVersion = obj[u"protonVersion"_s].toString();
-    // protonPath is left empty here; Launcher resolves it after loading.
     g.umuId = obj[u"umuId"_s].toString();
     g.iconPath = obj[u"iconPath"_s].toString();
     g.gridPath = obj[u"gridPath"_s].toString();

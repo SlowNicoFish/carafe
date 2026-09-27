@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 
 Item {
@@ -41,7 +41,7 @@ Item {
                 root.launchRequested(item.gameId)
         }
 
-        ScrollBar.vertical: ScrollBar { }
+        QQC2.ScrollBar.vertical: QQC2.ScrollBar { }
 
         delegate: GameListItem {
             width: ListView.view.width

@@ -182,7 +182,11 @@ void SteamGrid::onImageReply(QNetworkReply *reply, const QString &imageUrl, cons
 
     const QByteArray data = reply->readAll();
     const QString dir = assetDir();
-    QDir().mkpath(dir);
+    if (!QDir().mkpath(dir)) {
+        const QString err = u"Failed to create image directory: %1"_s.arg(dir);
+        isIcon ? Q_EMIT iconError(gameId, err) : Q_EMIT gridError(gameId, err);
+        return;
+    }
 
     QString extension = QFileInfo(QUrl(imageUrl).path()).suffix().toLower();
     if (!allowedImageExtensions().contains(extension))

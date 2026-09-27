@@ -249,7 +249,7 @@ QString GameLibrary::importImage(const QString &sourcePath, const QString &gameI
 void GameLibrary::triggerIconExtraction(const QUuid &gameId, const QString &exePath) {
     // Avoid spawning concurrent wrestool/icotool processes for the same game
     // when addGame/updateGame is called repeatedly with a new exePath.
-    if (gameId.isNull() || exePath.isEmpty())
+    if (gameId.isNull() || exePath.isEmpty() || !QFileInfo(exePath).isFile())
         return;
 
     m_pendingIconExtractions.insert(gameId, exePath);

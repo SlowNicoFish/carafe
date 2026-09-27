@@ -82,7 +82,6 @@ AppSettings SettingsStore::loadBasic() {
     s.defaultProton = obj[u"defaultProton"_s].toString();
     s.defaultLaunchArgs = obj[u"defaultLaunchArgs"_s].toString();
     s.defaultWrapperCommand = obj[u"defaultWrapperCommand"_s].toString();
-    // Kept as the fallback for loadApiKey() when no keyring is available.
     s.steamgridApiKey = obj[u"steamgridApiKey"_s].toString();
 
     return s;
@@ -105,7 +104,8 @@ QString SettingsStore::loadApiKey(const QString &jsonFallback) {
 
 bool SettingsStore::writeSettingsFile(const QJsonObject &obj) {
     const QString path = settingsPath();
-    QDir().mkpath(QFileInfo(path).absolutePath());
+    if (!QDir().mkpath(QFileInfo(path).absolutePath()))
+        return false;
 
     QSaveFile f(path);
     if (!f.open(QIODevice::WriteOnly))
@@ -126,8 +126,6 @@ bool SettingsStore::save(const AppSettings &s) const {
             if (!keySaved)
                 return false;
 
-            // The key lives in the keyring; only persist a presence marker so
-            // the plaintext key never lands in the JSON file.
             QJsonObject obj;
             obj[u"defaultProton"_s] = s.defaultProton;
             obj[u"defaultLaunchArgs"_s] = s.defaultLaunchArgs;

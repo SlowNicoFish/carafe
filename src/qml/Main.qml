@@ -23,9 +23,6 @@ Kirigami.ApplicationWindow {
         property string viewMode: "grid"
     }
 
-    property string viewMode: uiSettings.viewMode
-    onViewModeChanged: uiSettings.viewMode = viewMode
-
     function fetchArtwork(gameId) {
         const apiKey = Backend.steamgridApiKey;
         if (!apiKey || apiKey.trim() === "") {
@@ -48,9 +45,9 @@ Kirigami.ApplicationWindow {
                 onTriggered: addGameDialog.open()
             },
             Kirigami.Action {
-                icon.name: viewMode === "grid" ? "view-list-details" : "view-grid"
-                text: viewMode === "grid" ? "List View" : "Grid View"
-                onTriggered: viewMode = viewMode === "grid" ? "list" : "grid"
+                icon.name: uiSettings.viewMode === "grid" ? "view-list-details" : "view-grid"
+                text: uiSettings.viewMode === "grid" ? "List View" : "Grid View"
+                onTriggered: uiSettings.viewMode = uiSettings.viewMode === "grid" ? "list" : "grid"
             },
             Kirigami.Action {
                 icon.name: "settings-configure"
@@ -66,7 +63,7 @@ Kirigami.ApplicationWindow {
             Loader {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                sourceComponent: viewMode === "grid" ? gridPage : listPage
+                sourceComponent: uiSettings.viewMode === "grid" ? gridPage : listPage
             }
         }
 
@@ -104,8 +101,6 @@ Kirigami.ApplicationWindow {
             }
         }
     }
-
-    // ── Dialogs ───────────────────────────────────────────────────────────
 
     AddGameDialog {
         id: addGameDialog
@@ -206,7 +201,6 @@ Kirigami.ApplicationWindow {
         }
     }
 
-    // ── Toast notification bar ────────────────────────────────────────────
     Kirigami.InlineMessage {
         id: toastBar
         anchors {

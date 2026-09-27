@@ -23,15 +23,21 @@ void StorageTest::savesAndLoadsLibrary() {
     const QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir(directory).removeRecursively();
 
-    const Game original = Game::create(u"Saved game"_s, u"/tmp/game.exe"_s, u"/tmp/prefix"_s);
+    Game original = Game::create(u"Saved game"_s, u"/tmp/game.exe"_s, u"/tmp/prefix"_s);
+    original.launchArgs = u"--fullscreen"_s;
+    original.wrapperCommand = u"gamescope --"_s;
+    original.protonVersion = u"GE-Proton"_s;
+    original.umuId = u"umu-game-id"_s;
+    original.iconPath = u"/icons/game.png"_s;
+    original.gridPath = u"/icons/game_grid.jpg"_s;
+    original.steamgridIconPath = u"/icons/game_steamgrid.png"_s;
     Storage storage;
     QVERIFY(storage.saveLibrary({original}));
 
     const QList<Game> loaded = storage.loadLibrary();
     QCOMPARE(loaded.size(), 1);
     QCOMPARE(loaded.first().id, original.id);
-    QCOMPARE(loaded.first().title, original.title);
-    QCOMPARE(loaded.first().exePath, original.exePath);
+    QCOMPARE(loaded.first().toJson(), original.toJson());
 }
 
 void StorageTest::invalidRecordsAreQuarantined() {

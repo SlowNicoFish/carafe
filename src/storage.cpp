@@ -96,7 +96,8 @@ QList<Game> Storage::loadLibrary() const {
 
 bool Storage::saveLibrary(const QList<Game> &games) const {
     const QString path = libraryPath();
-    QDir().mkpath(QFileInfo(path).absolutePath());
+    if (!QDir().mkpath(QFileInfo(path).absolutePath()))
+        return false;
 
     QJsonArray arr;
     for (const Game &g : games)

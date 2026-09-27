@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 
 Item {
@@ -47,7 +47,7 @@ Item {
                 root.launchRequested(card.gameId)
         }
 
-        ScrollBar.vertical: ScrollBar { }
+        QQC2.ScrollBar.vertical: QQC2.ScrollBar { }
 
         delegate: GameCard {
             width: root.cellW - Kirigami.Units.largeSpacing

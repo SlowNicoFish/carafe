@@ -11,6 +11,7 @@ class LaunchManagerTest : public QObject {
 
 private Q_SLOTS:
     void hostWrapperReceivesUmuCommandAndArguments();
+    void failedToStartReportsErrorAndClearsTracking();
 };
 
 void LaunchManagerTest::hostWrapperReceivesUmuCommandAndArguments() {
@@ -53,6 +54,33 @@ void LaunchManagerTest::hostWrapperReceivesUmuCommandAndArguments() {
 
     QCOMPARE(received,
              QStringList({u"--wrapper-option"_s, u"umu-run"_s, u"/games/My Game.exe"_s, u"--name"_s, u"Player One"_s}));
+}
+
+void LaunchManagerTest::failedToStartReportsErrorAndClearsTracking() {
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+
+    LaunchManager::Spec spec;
+    spec.gameUuid = QUuid::createUuid();
+    spec.wrapperCommand = directory.filePath(u"missing-wrapper"_s);
+
+    bool terminalOk = true;
+    QString terminalMessage;
+    int terminalCount = 0;
+
+    LaunchManager manager;
+    manager.start(
+        spec, [] {},
+        [&terminalOk, &terminalMessage, &terminalCount](bool ok, const QString &message) {
+            terminalOk = ok;
+            terminalMessage = message;
+            ++terminalCount;
+        });
+
+    QTRY_COMPARE_WITH_TIMEOUT(terminalCount, 1, 3000);
+    QVERIFY(!terminalOk);
+    QVERIFY(terminalMessage.contains(u"Failed to start"_s));
+    QVERIFY(!manager.isRunning(spec.gameUuid));
 }
 
 QTEST_MAIN(LaunchManagerTest)

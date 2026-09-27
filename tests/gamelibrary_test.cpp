@@ -1,4 +1,5 @@
 #include "gamelibrary.h"
+#include "icoextract.h"
 #include "storage.h"
 
 #include <QDir>
@@ -18,6 +19,7 @@ private Q_SLOTS:
     void removesGameWhenPrefixIsUnmanaged();
     void rejectsInvalidUpdate();
     void rejectsUnsafeImportedImagePath();
+    void rejectsIconDirectoryCreationFailure();
 
 private:
     QString libraryPath() const;
@@ -91,6 +93,21 @@ void GameLibraryTest::rejectsUnsafeImportedImagePath() {
 
     GameLibrary library;
     QVERIFY(library.importImage(sourcePath, u"../outside"_s, u"grid"_s).isEmpty());
+}
+
+void GameLibraryTest::rejectsIconDirectoryCreationFailure() {
+    QTemporaryDir executableDirectory;
+    QVERIFY(executableDirectory.isValid());
+    QFile executable(executableDirectory.filePath(u"game.exe"_s));
+    QVERIFY(executable.open(QIODevice::WriteOnly));
+    executable.close();
+
+    const QString iconDirectory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + u"/icons"_s;
+    QFile obstruction(iconDirectory);
+    QVERIFY(obstruction.open(QIODevice::WriteOnly));
+    obstruction.close();
+
+    QVERIFY(IcoExtract::extractIcon(QUuid::createUuid(), executable.fileName()).isEmpty());
 }
 
 QTEST_MAIN(GameLibraryTest)
