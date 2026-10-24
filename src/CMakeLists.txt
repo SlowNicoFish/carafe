@@ -39,6 +39,7 @@ target_compile_definitions(carafe PRIVATE
 target_link_libraries(carafe PRIVATE
     Qt6::Core
     Qt6::Gui
+    Qt6::Widgets
     Qt6::Qml
     Qt6::Quick
     Qt6::QuickControls2
@@ -48,7 +49,7 @@ target_link_libraries(carafe PRIVATE
     KF6::Kirigami
 )
 
-if(KF6::Wallet)
+if(TARGET KF6::Wallet)
   target_link_libraries(carafe PRIVATE KF6::Wallet)
   target_compile_definitions(carafe PRIVATE HAVE_KWALLET)
 endif()
@@ -67,6 +68,7 @@ qt_add_qml_module(carafe
         qml/AddGameDialog.qml
         qml/EditGameDialog.qml
         qml/SettingsDialog.qml
+        qml/SteamGridKeyDialog.qml
         qml/ContextMenu.qml
         qml/GameActions.qml
     NO_RESOURCE_TARGET_PATH

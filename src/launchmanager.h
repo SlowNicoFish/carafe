@@ -53,6 +53,9 @@ public:
     /** Terminates all tracked processes (used on shutdown). */
     void terminateAll();
 
+Q_SIGNALS:
+    void processStopped(const QUuid &gameUuid);
+
 private:
     QMap<QUuid, QProcess *> m_runningGames;
     QSet<QProcess *> m_stoppedProcesses;

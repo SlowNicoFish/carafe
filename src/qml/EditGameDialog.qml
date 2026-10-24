@@ -1,13 +1,13 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
-import QtQuick.Dialogs
 import org.kde.kirigami as Kirigami
 
 Kirigami.Dialog {
     id: dialog
     title: "Edit Game"
     padding: Kirigami.Units.largeSpacing
+    width: Kirigami.Units.gridUnit * 35
 
     property string gameId: ""
     property var protonBuilds: []
@@ -69,7 +69,11 @@ Kirigami.Dialog {
                 }
                 QQC2.Button {
                     text: "Browse…"
-                    onClicked: exeDialog.open()
+                    onClicked: {
+                        const path = Backend.chooseFile("Select game executable", ["Executables (*.exe)", "All Files (*)"], prefixField.text);
+                        if (path.length > 0)
+                            exeField.text = path;
+                    }
                 }
             }
 
@@ -83,7 +87,11 @@ Kirigami.Dialog {
                 }
                 QQC2.Button {
                     text: "Browse…"
-                    onClicked: prefixDialog.open()
+                    onClicked: {
+                        const path = Backend.chooseDirectory("Select Wine prefix directory", prefixField.text);
+                        if (path.length > 0)
+                            prefixField.text = path;
+                    }
                 }
             }
 
@@ -127,7 +135,14 @@ Kirigami.Dialog {
                 QQC2.Button {
                     text: "Browse…"
                     icon.name: "image-x-generic"
-                    onClicked: gridImageDialog.open()
+                    onClicked: {
+                        const path = Backend.chooseFile("Select grid image", ["Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "All Files (*)"]);
+                        if (path.length === 0)
+                            return;
+                        const imported = Backend.importImage(path, dialog.gameId, "grid");
+                        if (imported.length > 0)
+                            dialog._gridPath = imported;
+                    }
                 }
             }
 
@@ -146,7 +161,14 @@ Kirigami.Dialog {
                 QQC2.Button {
                     text: "Browse…"
                     icon.name: "image-x-generic"
-                    onClicked: iconImageDialog.open()
+                    onClicked: {
+                        const path = Backend.chooseFile("Select icon image", ["Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "All Files (*)"]);
+                        if (path.length === 0)
+                            return;
+                        const imported = Backend.importImage(path, dialog.gameId, "icon");
+                        if (imported.length > 0)
+                            dialog._iconPath = imported;
+                    }
                 }
             }
 
@@ -158,11 +180,7 @@ Kirigami.Dialog {
                 onClicked: {
                     const title = titleField.text.trim();
                     dialog._pendingFetchTitle = title;
-                    dialog._gridArtworkDone = false;
-                    dialog._iconArtworkDone = false;
-                    _fetchingArtwork = true;
-                    Backend.fetchGridArtwork(title);
-                    Backend.fetchIconArtwork(title);
+                    steamGridKeyDialog.openForRequest();
                 }
             }
         }
@@ -198,44 +216,14 @@ Kirigami.Dialog {
         }
     ]
 
-    function urlToPath(url) {
-        return Backend.urlToLocalFile(url);
-    }
-
-    FileDialog {
-        id: exeDialog
-        title: "Select game executable"
-        nameFilters: ["Executables (*.exe)", "All Files (*)"]
-        onAccepted: exeField.text = dialog.urlToPath(selectedFile)
-    }
-
-    FolderDialog {
-        id: prefixDialog
-        title: "Select Wine prefix directory"
-        onAccepted: prefixField.text = dialog.urlToPath(selectedFolder)
-    }
-
-    FileDialog {
-        id: gridImageDialog
-        title: "Select grid image"
-        nameFilters: ["Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "All Files (*)"]
-        onAccepted: {
-            const path = dialog.urlToPath(selectedFile);
-            const imported = Backend.importImage(path, dialog.gameId, "grid");
-            if (imported.length > 0)
-                dialog._gridPath = imported;
-        }
-    }
-
-    FileDialog {
-        id: iconImageDialog
-        title: "Select icon image"
-        nameFilters: ["Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "All Files (*)"]
-        onAccepted: {
-            const path = dialog.urlToPath(selectedFile);
-            const imported = Backend.importImage(path, dialog.gameId, "icon");
-            if (imported.length > 0)
-                dialog._iconPath = imported;
+    SteamGridKeyDialog {
+        id: steamGridKeyDialog
+        onKeyAccepted: apiKey => {
+            dialog._gridArtworkDone = false;
+            dialog._iconArtworkDone = false;
+            dialog._fetchingArtwork = true;
+            Backend.fetchGridArtwork(dialog._pendingFetchTitle, apiKey);
+            Backend.fetchIconArtwork(dialog._pendingFetchTitle, apiKey);
         }
     }
 

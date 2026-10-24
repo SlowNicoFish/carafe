@@ -1,15 +1,17 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QIcon>
+#include <QQuickStyle>
 
 #include "launcher.h"
 using namespace Qt::Literals::StringLiterals;
 
 int main(int argc, char *argv[]) {
-    qputenv("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
-    QCoreApplication::setOrganizationName(QString());
+    QQuickStyle::setStyle(QStringLiteral("org.kde.desktop"));
+    QCoreApplication::setOrganizationName(QStringLiteral("Marlonn"));
+    QCoreApplication::setOrganizationDomain(QStringLiteral("marlonn.io"));
     QCoreApplication::setApplicationName(QStringLiteral(APP_ID));
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
 
     app.setDesktopFileName(QStringLiteral(APP_ID));
     app.setWindowIcon(QIcon::fromTheme(QStringLiteral(APP_ID)));

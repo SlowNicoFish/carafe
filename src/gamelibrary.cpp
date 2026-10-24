@@ -236,11 +236,24 @@ QString GameLibrary::importImage(const QString &sourcePath, const QString &gameI
         return {};
 
     const QString dest = u"%1/%2_%3.%4"_s.arg(dir, id, suffix, ext);
-    if (sourcePath == dest)
+    if (sourcePath == dest || srcInfo.canonicalFilePath() == QFileInfo(dest).canonicalFilePath())
         return dest;
 
-    QFile::remove(dest);
-    if (!QFile::copy(sourcePath, dest))
+    QFile source(sourcePath);
+    if (!source.open(QIODevice::ReadOnly))
+        return {};
+
+    QSaveFile destination(dest);
+    if (!destination.open(QIODevice::WriteOnly))
+        return {};
+    while (!source.atEnd()) {
+        const QByteArray chunk = source.read(64 * 1024);
+        if (chunk.isEmpty() && source.error() != QFileDevice::NoError)
+            return {};
+        if (destination.write(chunk) != chunk.size())
+            return {};
+    }
+    if (!destination.commit())
         return {};
 
     return dest;

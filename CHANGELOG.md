@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- One-time SteamGridDB API key entry and regression tests for recovery and shutdown.
+
+### Changed
+
+- Store saved API keys only in KWallet and use the KDE desktop style.
+
+### Fixed
+
+- Preserve empty quoted launch arguments, safely terminate processes, and limit artwork downloads.
+- Keep corrupt settings and distinct invalid-library records recoverable. Import images atomically.
+
+### Documentation
+
+- Add a `just test` recipe and document the CTest workflow.
+
 ## [0.2.0] - 2026-09-18
 
 ### Added

@@ -27,7 +27,13 @@ void Storage::quarantineLibrary() const {
     if (!QFile::exists(path))
         return;
 
-    const QString backup = path + u".corrupt-%1"_s.arg(QDateTime::currentDateTime().toString(u"yyyyMMdd-HHmmss"_s));
+    const QString timestamp = QDateTime::currentDateTime().toString(u"yyyyMMdd-HHmmss-zzz"_s);
+    QString backup = path + u".corrupt-%1"_s.arg(timestamp);
+    int suffix = 2;
+    const QString base = backup;
+    while (QFile::exists(backup))
+        backup = u"%1-%2"_s.arg(base).arg(suffix++);
+
     if (QFile::rename(path, backup))
         qWarning() << "Quarantined corrupt library file to" << backup;
     else
@@ -38,7 +44,24 @@ void Storage::quarantineInvalidRecords(const QJsonArray &records) const {
     if (records.isEmpty())
         return;
 
-    const QString path = libraryPath() + u".invalid"_s;
+    QString path = libraryPath() + u".invalid"_s;
+    if (QFile::exists(path)) {
+        QFile previous(path);
+        if (previous.open(QIODevice::ReadOnly)) {
+            QJsonParseError parseError;
+            const QJsonDocument doc = QJsonDocument::fromJson(previous.readAll(), &parseError);
+            if (parseError.error == QJsonParseError::NoError && doc.isArray() && doc.array() == records)
+                return;
+        }
+
+        const QString timestamp = QDateTime::currentDateTime().toString(u"yyyyMMdd-HHmmss-zzz"_s);
+        path += u"-%1"_s.arg(timestamp);
+        int suffix = 2;
+        const QString base = path;
+        while (QFile::exists(path))
+            path = u"%1-%2"_s.arg(base).arg(suffix++);
+    }
+
     QSaveFile f(path);
     if (!f.open(QIODevice::WriteOnly)) {
         qWarning() << "Could not write invalid library records to" << path;

@@ -3,6 +3,7 @@
 QStringList parseShellArgs(const QString &input) {
     QStringList result;
     QString current;
+    bool tokenStarted = false;
     bool inSingle = false;
     bool inDouble = false;
 
@@ -32,22 +33,27 @@ QStringList parseShellArgs(const QString &input) {
         } else {
             if (ch == u'\'') {
                 inSingle = true;
+                tokenStarted = true;
             } else if (ch == u'"') {
                 inDouble = true;
+                tokenStarted = true;
             } else if (ch == u'\\' && i + 1 < input.size()) {
                 current += input[++i];
+                tokenStarted = true;
             } else if (ch.isSpace()) {
-                if (!current.isEmpty()) {
+                if (tokenStarted) {
                     result << current;
                     current.clear();
+                    tokenStarted = false;
                 }
             } else {
                 current += ch;
+                tokenStarted = true;
             }
         }
     }
 
-    if (!current.isEmpty())
+    if (tokenStarted)
         result << current;
 
     return result;

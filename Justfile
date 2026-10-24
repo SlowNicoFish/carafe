@@ -8,6 +8,11 @@ configure type="Debug":
 build type="Debug":
     cmake --build build/{{ type }} --parallel
 
+# Test
+test type="Debug":
+    just build {{ type }}
+    ctest --test-dir build/{{ type }} --output-on-failure
+
 # Run
 run type="Debug":
     #!/usr/bin/env bash

@@ -16,6 +16,8 @@ class StorageTest : public QObject {
 private Q_SLOTS:
     void savesAndLoadsLibrary();
     void invalidRecordsAreQuarantined();
+    void laterInvalidRecordsDoNotReplaceEarlierBackup();
+    void corruptLibraryIsQuarantined();
 };
 
 void StorageTest::savesAndLoadsLibrary() {
@@ -45,7 +47,8 @@ void StorageTest::invalidRecordsAreQuarantined() {
     const QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir().mkpath(directory);
     QFile::remove(directory + u"/library.json"_s);
-    QFile::remove(directory + u"/library.json.invalid"_s);
+    for (const QString &file : QDir(directory).entryList({u"library.json.invalid*"_s}, QDir::Files))
+        QFile::remove(directory + u"/"_s + file);
 
     const Game valid = Game::create(u"Valid"_s, u"/tmp/valid.exe"_s, u"/tmp/prefix"_s);
     QJsonArray records;
@@ -70,6 +73,74 @@ void StorageTest::invalidRecordsAreQuarantined() {
     QCOMPARE(error.error, QJsonParseError::NoError);
     QVERIFY(quarantined.isArray());
     QCOMPARE(quarantined.array().size(), 2);
+}
+
+void StorageTest::laterInvalidRecordsDoNotReplaceEarlierBackup() {
+    QStandardPaths::setTestModeEnabled(true);
+    const QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir(directory).removeRecursively();
+    QVERIFY(QDir().mkpath(directory));
+
+    const QString libraryPath = directory + u"/library.json"_s;
+    QJsonArray firstRecords;
+    firstRecords.append(QJsonObject{{u"invalid"_s, u"first"_s}});
+    QFile library(libraryPath);
+    QVERIFY(library.open(QIODevice::WriteOnly));
+    QCOMPARE(library.write(QJsonDocument(firstRecords).toJson()), QJsonDocument(firstRecords).toJson().size());
+    library.close();
+
+    Storage storage;
+    QVERIFY(storage.loadLibrary().isEmpty());
+    const QString firstBackupPath = directory + u"/library.json.invalid"_s;
+    QFile firstBackup(firstBackupPath);
+    QVERIFY(firstBackup.open(QIODevice::ReadOnly));
+    const QByteArray firstBackupContents = firstBackup.readAll();
+    firstBackup.close();
+
+    QVERIFY(storage.loadLibrary().isEmpty());
+    QCOMPARE(QDir(directory).entryList({u"library.json.invalid-*"_s}, QDir::Files).size(), 0);
+
+    QJsonArray secondRecords;
+    secondRecords.append(QJsonObject{{u"invalid"_s, u"second"_s}});
+    QVERIFY(library.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    QCOMPARE(library.write(QJsonDocument(secondRecords).toJson()), QJsonDocument(secondRecords).toJson().size());
+    library.close();
+
+    QVERIFY(storage.loadLibrary().isEmpty());
+    firstBackup.setFileName(firstBackupPath);
+    QVERIFY(firstBackup.open(QIODevice::ReadOnly));
+    QCOMPARE(firstBackup.readAll(), firstBackupContents);
+
+    const QStringList laterBackups = QDir(directory).entryList({u"library.json.invalid-*"_s}, QDir::Files);
+    QCOMPARE(laterBackups.size(), 1);
+    QFile laterBackup(directory + u"/"_s + laterBackups.first());
+    QVERIFY(laterBackup.open(QIODevice::ReadOnly));
+    const QJsonDocument laterDocument = QJsonDocument::fromJson(laterBackup.readAll());
+    QCOMPARE(laterDocument.array(), secondRecords);
+}
+
+void StorageTest::corruptLibraryIsQuarantined() {
+    QStandardPaths::setTestModeEnabled(true);
+    const QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir(directory).removeRecursively();
+    QVERIFY(QDir().mkpath(directory));
+
+    const QString libraryPath = directory + u"/library.json"_s;
+    const QByteArray corruptData = "{ not valid json";
+    QFile library(libraryPath);
+    QVERIFY(library.open(QIODevice::WriteOnly));
+    QCOMPARE(library.write(corruptData), corruptData.size());
+    library.close();
+
+    Storage storage;
+    QVERIFY(storage.loadLibrary().isEmpty());
+
+    const QStringList quarantined = QDir(directory).entryList({u"library.json.corrupt-*"_s}, QDir::Files);
+    QCOMPARE(quarantined.size(), 1);
+
+    QFile backup(directory + u"/"_s + quarantined.first());
+    QVERIFY(backup.open(QIODevice::ReadOnly));
+    QCOMPARE(backup.readAll(), corruptData);
 }
 
 QTEST_MAIN(StorageTest)

@@ -11,6 +11,7 @@
 #include <QStandardPaths>
 #include <QUrl>
 #include <QUrlQuery>
+#include <memory>
 using namespace Qt::Literals::StringLiterals;
 
 static constexpr auto API_BASE = "https://www.steamgriddb.com/api/v2";
@@ -158,14 +159,36 @@ void SteamGrid::downloadAsset(const QString &imageUrl, const QUuid &gameId, cons
     req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
     QNetworkReply *reply = m_nam->get(req);
-    connect(reply, &QNetworkReply::finished, this, [this, reply, imageUrl, gameId, suffix, isIcon]() {
-        onImageReply(reply, imageUrl, gameId, suffix, isIcon);
-    });
+    constexpr qint64 maxImageBytes = 20 * 1024 * 1024;
+    reply->setReadBufferSize(maxImageBytes + 1);
+    auto data = std::make_shared<QByteArray>();
+    auto collectData = [reply, data]() {
+        constexpr qint64 maxBytes = 20 * 1024 * 1024;
+        while (reply->bytesAvailable() > 0 && data->size() <= maxBytes) {
+            const qint64 remaining = maxBytes + 1 - data->size();
+            data->append(reply->read(remaining));
+        }
+        if (data->size() > maxBytes)
+            reply->abort();
+    };
+    connect(reply, &QIODevice::readyRead, this, collectData);
+    connect(reply, &QNetworkReply::finished, this,
+            [this, reply, imageUrl, gameId, suffix, isIcon, data, collectData]() {
+                collectData();
+                onImageReply(reply, imageUrl, gameId, suffix, isIcon, *data);
+            });
 }
 
 void SteamGrid::onImageReply(QNetworkReply *reply, const QString &imageUrl, const QUuid &gameId, const QString &suffix,
-                             bool isIcon) {
+                             bool isIcon, const QByteArray &data) {
     reply->deleteLater();
+
+    constexpr qint64 maxImageBytes = 20 * 1024 * 1024;
+    if (data.size() > maxImageBytes) {
+        const QString err = u"Image response exceeds the 20 MiB limit."_s;
+        isIcon ? Q_EMIT iconError(gameId, err) : Q_EMIT gridError(gameId, err);
+        return;
+    }
 
     if (reply->error() != QNetworkReply::NoError) {
         const QString err = u"Image download failed: %1"_s.arg(describeReplyError(reply));
@@ -173,14 +196,6 @@ void SteamGrid::onImageReply(QNetworkReply *reply, const QString &imageUrl, cons
         return;
     }
 
-    constexpr qint64 maxImageBytes = 20 * 1024 * 1024;
-    if (reply->size() > maxImageBytes) {
-        const QString err = u"Image response too large (%1 bytes)"_s.arg(reply->size());
-        isIcon ? Q_EMIT iconError(gameId, err) : Q_EMIT gridError(gameId, err);
-        return;
-    }
-
-    const QByteArray data = reply->readAll();
     const QString dir = assetDir();
     if (!QDir().mkpath(dir)) {
         const QString err = u"Failed to create image directory: %1"_s.arg(dir);

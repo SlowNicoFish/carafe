@@ -7,6 +7,7 @@
 struct AppSettings {
     QString defaultProton;
     QString steamgridApiKey;
+    bool removeSteamgridApiKey = false;
     QString defaultLaunchArgs;
     QString defaultWrapperCommand;
 
@@ -19,9 +20,8 @@ struct AppSettings {
  * Non-sensitive fields are persisted in a JSON file under the platform's
  * application configuration directory.
  *
- * The SteamGridDB API key is stored in the system keyring (KWallet /
- * Freedesktop Secret Service) when available, with a fallback to the
- * JSON file.
+ * The SteamGridDB API key is stored only in KWallet. It is never written to
+ * the JSON settings file.
  */
 class SettingsStore : public QObject {
     Q_OBJECT
@@ -30,8 +30,10 @@ public:
     explicit SettingsStore(QObject *parent = nullptr);
 
     static AppSettings loadBasic();
-    /** Reads the SteamGridDB API key from the keyring (may block briefly). */
-    static QString loadApiKey(const QString &jsonFallback);
+    /** Reads the SteamGridDB API key from KWallet (may block briefly). */
+    static QString loadApiKey();
+    /** Returns whether the SteamGridDB API key exists in KWallet. */
+    static bool hasApiKey();
     bool save(const AppSettings &settings) const;
 
     /** Returns true when the system keyring is usable at run time. */

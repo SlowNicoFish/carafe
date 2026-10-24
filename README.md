@@ -47,6 +47,23 @@ cmake --build build
 ./build/bin/carafe
 ```
 
+### Tests
+
+Configure the desired build type, then run the test suite:
+
+```bash
+just configure
+just test
+```
+
+The test recipe builds first. For Release, use `just configure release` and `just test release`. For a direct CMake build:
+
+```bash
+cmake -B build -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
 ## Data
 
 - Library: `~/.local/share/io.marlonn.carafe/library.json`

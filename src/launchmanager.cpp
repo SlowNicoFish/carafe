@@ -47,53 +47,51 @@ void LaunchManager::start(const Spec &spec, const std::function<void()> &onStart
 
     connect(process, &QProcess::started, this, [onStarted]() { onStarted(); });
 
-    auto finishProcess = [this, process, tracked, uuid = spec.gameUuid]() {
+    auto finished = std::make_shared<bool>(false);
+    auto finishProcess = [this, process, tracked, uuid = spec.gameUuid, onTerminal, finished](bool ok,
+                                                                                              const QString &message) {
+        if (*finished)
+            return;
+        *finished = true;
+        const bool wasStopped = tracked && m_stoppedProcesses.remove(process);
         if (tracked && m_runningGames.value(uuid) == process)
             m_runningGames.remove(uuid);
         process->deleteLater();
+        if (wasStopped)
+            Q_EMIT processStopped(uuid);
+        else
+            onTerminal(ok, message);
     };
 
-    connect(process, &QProcess::errorOccurred, this,
-            [this, process, tracked, program, onTerminal, finishProcess](QProcess::ProcessError error) {
-                QString message;
-                if (error == QProcess::FailedToStart)
-                    message = u"Failed to start %1. Is it installed?"_s.arg(program);
-                else if (error == QProcess::Crashed)
-                    message = u"%1 crashed."_s.arg(program);
-                else
-                    message = u"Process error: %1"_s.arg(static_cast<int>(error));
+    connect(process, &QProcess::errorOccurred, this, [program, finishProcess](QProcess::ProcessError error) {
+        QString message;
+        if (error == QProcess::FailedToStart)
+            message = u"Failed to start %1. Is it installed?"_s.arg(program);
+        else if (error == QProcess::Crashed)
+            message = u"%1 crashed."_s.arg(program);
+        else
+            message = u"Process error: %1"_s.arg(static_cast<int>(error));
 
-                const bool finishedWillFollow = (error == QProcess::Crashed);
-                if (!finishedWillFollow) {
-                    if (tracked && m_stoppedProcesses.remove(process)) {
-                        finishProcess();
-                        return;
-                    }
-                    finishProcess();
-                    onTerminal(false, message);
-                }
-            });
+        if (error != QProcess::Crashed)
+            finishProcess(false, message);
+    });
 
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-            [this, process, tracked, onTerminal, finishProcess,
-             successMessage = spec.successMessage](int exitCode, QProcess::ExitStatus status) {
-                // A deliberate stop() suppresses the terminal callback so callers
-                // (e.g. removeGame) don't report the kill as a launch failure.
-                if (tracked && m_stoppedProcesses.remove(process)) {
-                    finishProcess();
+            [finishProcess, successMessage = spec.successMessage](int exitCode, QProcess::ExitStatus status) {
+                if (status == QProcess::CrashExit) {
+                    finishProcess(false, u"Process crashed."_s);
                     return;
                 }
-                const bool ok = (status == QProcess::NormalExit && exitCode == 0);
-                finishProcess();
-                onTerminal(ok, ok ? successMessage : u"Process exited with code %1."_s.arg(exitCode));
+                const bool ok = (exitCode == 0);
+                finishProcess(ok, ok ? successMessage : u"Process exited with code %1."_s.arg(exitCode));
             });
 
     process->start(program, programArgs);
 }
 
 void LaunchManager::stop(const QUuid &gameUuid) {
-    QProcess *process = m_runningGames.take(gameUuid);
-    if (!process)
+    QProcess *process = m_runningGames.value(gameUuid);
+    if (!process || m_stoppedProcesses.contains(process))
         return;
 
     m_stoppedProcesses.insert(process);
@@ -105,7 +103,8 @@ void LaunchManager::stop(const QUuid &gameUuid) {
 }
 
 void LaunchManager::terminateAll() {
-    for (QProcess *process : std::as_const(m_runningGames)) {
+    const auto processes = m_runningGames.values();
+    for (QProcess *process : processes) {
         if (process->state() != QProcess::NotRunning) {
             process->terminate();
             if (!process->waitForFinished(3000))
@@ -113,4 +112,5 @@ void LaunchManager::terminateAll() {
         }
     }
     m_runningGames.clear();
+    m_stoppedProcesses.clear();
 }

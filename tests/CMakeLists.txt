@@ -9,6 +9,16 @@ target_link_libraries(carafe_storage_tests PRIVATE Qt6::Core Qt6::Test)
 
 add_test(NAME carafe_storage_tests COMMAND carafe_storage_tests)
 
+qt_add_executable(carafe_settings_tests
+    settings_test.cpp
+    ../src/settings.cpp
+)
+
+target_include_directories(carafe_settings_tests PRIVATE ../src)
+target_link_libraries(carafe_settings_tests PRIVATE Qt6::Core Qt6::Test)
+
+add_test(NAME carafe_settings_tests COMMAND carafe_settings_tests)
+
 qt_add_executable(carafe_gamemodel_tests
     gamemodel_test.cpp
     ../src/game.cpp

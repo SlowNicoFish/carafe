@@ -15,17 +15,20 @@ Item {
     property string umuId: ""
     property bool isRunning: false
 
-    signal launchRequested()
-    signal editRequested()
-    signal deleteRequested()
-    signal fetchArtworkRequested()
-    signal runExeInPrefixRequested()
-    signal selectRequested()
+    signal launchRequested
+    signal stopRequested
+    signal editRequested
+    signal deleteRequested
+    signal fetchArtworkRequested
+    signal runExeInPrefixRequested
+    signal selectRequested
 
     GameActions {
         id: actions
         gameId: cardRoot.gameId
+        isRunning: cardRoot.isRunning
         onLaunchRequested: cardRoot.launchRequested()
+        onStopRequested: cardRoot.stopRequested()
         onEditRequested: cardRoot.editRequested()
         onDeleteRequested: cardRoot.deleteRequested()
         onFetchArtworkRequested: cardRoot.fetchArtworkRequested()
@@ -108,6 +111,7 @@ Item {
                     onClicked: cardRoot.launchRequested()
                 }
                 QQC2.Button {
+                    visible: !cardRoot.isRunning
                     icon.name: "document-edit"
                     display: QQC2.AbstractButton.IconOnly
                     QQC2.ToolTip.text: "Edit"
@@ -116,12 +120,22 @@ Item {
                     onClicked: cardRoot.editRequested()
                 }
                 QQC2.Button {
+                    visible: !cardRoot.isRunning
                     icon.name: "edit-delete"
                     display: QQC2.AbstractButton.IconOnly
                     QQC2.ToolTip.text: "Remove"
                     QQC2.ToolTip.visible: hovered
                     QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
                     onClicked: cardRoot.deleteRequested()
+                }
+                QQC2.Button {
+                    visible: cardRoot.isRunning
+                    icon.name: "media-playback-stop"
+                    display: QQC2.AbstractButton.IconOnly
+                    QQC2.ToolTip.text: "Stop"
+                    QQC2.ToolTip.visible: hovered
+                    QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    onClicked: cardRoot.stopRequested()
                 }
             }
         }

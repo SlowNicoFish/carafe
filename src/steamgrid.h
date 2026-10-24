@@ -36,7 +36,7 @@ private:
                           const QString &gameName);
     void downloadAsset(const QString &imageUrl, const QUuid &gameId, const QString &suffix, bool isIcon);
     void onImageReply(QNetworkReply *reply, const QString &imageUrl, const QUuid &gameId, const QString &suffix,
-                      bool isIcon);
+                      bool isIcon, const QByteArray &data);
 
     static void setCommonRequestAttrs(QNetworkRequest &req, const QString &apiKey);
     static QString assetDir();

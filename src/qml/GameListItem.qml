@@ -12,17 +12,20 @@ Item {
     property string iconSource: ""
     property bool isRunning: false
 
-    signal launchRequested()
+    signal launchRequested
+    signal stopRequested
     signal selectRequested(int itemIndex)
-    signal editRequested()
-    signal deleteRequested()
-    signal fetchArtworkRequested()
-    signal runExeInPrefixRequested()
+    signal editRequested
+    signal deleteRequested
+    signal fetchArtworkRequested
+    signal runExeInPrefixRequested
 
     GameActions {
         id: actions
         gameId: listItemRoot.gameId
+        isRunning: listItemRoot.isRunning
         onLaunchRequested: listItemRoot.launchRequested()
+        onStopRequested: listItemRoot.stopRequested()
         onEditRequested: listItemRoot.editRequested()
         onDeleteRequested: listItemRoot.deleteRequested()
         onFetchArtworkRequested: listItemRoot.fetchArtworkRequested()
@@ -85,10 +88,19 @@ Item {
 
             QQC2.ToolButton {
                 id: menuButton
+                visible: !listItemRoot.isRunning
                 icon.name: "open-menu-symbolic"
                 QQC2.ToolTip.text: "More actions"
                 QQC2.ToolTip.visible: hovered
                 onClicked: actions.popup(menuButton, 0, menuButton.height)
+            }
+
+            QQC2.ToolButton {
+                visible: listItemRoot.isRunning
+                icon.name: "media-playback-stop"
+                QQC2.ToolTip.text: "Stop"
+                QQC2.ToolTip.visible: hovered
+                onClicked: listItemRoot.stopRequested()
             }
         }
     }

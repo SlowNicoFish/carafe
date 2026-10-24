@@ -10,6 +10,7 @@
 #include <QObjectBindableProperty>
 #include <QQmlEngine>
 #include <QMap>
+#include <QStringList>
 #include <QUuid>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
@@ -28,8 +29,6 @@ class Launcher : public QObject {
     Q_PROPERTY(GameModel *gameModel READ gameModel CONSTANT)
     Q_PROPERTY(QStringList protonBuilds READ protonBuilds BINDABLE bindableProtonBuilds NOTIFY protonBuildsChanged)
     Q_PROPERTY(QString defaultProton READ defaultProton BINDABLE bindableDefaultProton NOTIFY defaultProtonChanged)
-    Q_PROPERTY(
-        QString steamgridApiKey READ steamgridApiKey BINDABLE bindableSteamgridApiKey NOTIFY steamgridApiKeyChanged)
     Q_PROPERTY(QString defaultLaunchArgs READ defaultLaunchArgs BINDABLE bindableDefaultLaunchArgs NOTIFY
                    defaultLaunchArgsChanged)
     Q_PROPERTY(QString defaultWrapperCommand READ defaultWrapperCommand BINDABLE bindableDefaultWrapperCommand NOTIFY
@@ -53,18 +52,19 @@ public:
     GameModel *gameModel();
     QStringList protonBuilds() const;
     QString defaultProton() const;
-    QString steamgridApiKey();
     QString defaultLaunchArgs() const;
     QString defaultWrapperCommand() const;
 
     QBindable<QStringList> bindableProtonBuilds() { return &m_protonBuilds; }
     QBindable<QString> bindableDefaultProton() { return &m_defaultProton; }
-    QBindable<QString> bindableSteamgridApiKey() { return &m_steamgridApiKey; }
     QBindable<QString> bindableDefaultLaunchArgs() { return &m_defaultLaunchArgs; }
     QBindable<QString> bindableDefaultWrapperCommand() { return &m_defaultWrapperCommand; }
 
     Q_INVOKABLE static QString urlToLocalFile(const QUrl &url);
     Q_INVOKABLE static QUrl localFileToUrl(const QString &path);
+    Q_INVOKABLE QString chooseFile(const QString &title, const QStringList &nameFilters,
+                                   const QString &initialDirectory = {}) const;
+    Q_INVOKABLE QString chooseDirectory(const QString &title, const QString &initialDirectory = {}) const;
     Q_INVOKABLE void loadLibrary();
     Q_INVOKABLE bool saveLibrary() const;
     Q_INVOKABLE void reloadProtonBuilds();
@@ -76,10 +76,14 @@ public:
     Q_INVOKABLE bool removeGame(const QString &gameId, bool removePrefix = false);
     Q_INVOKABLE QVariantMap gameById(const QString &gameId);
     Q_INVOKABLE bool launchGame(const QString &gameId);
+    Q_INVOKABLE bool stopGame(const QString &gameId);
     Q_INVOKABLE void fetchGrid(const QString &gameId, const QString &apiKey);
     Q_INVOKABLE void fetchIcon(const QString &gameId, const QString &apiKey);
-    Q_INVOKABLE void fetchGridArtwork(const QString &gameName);
-    Q_INVOKABLE void fetchIconArtwork(const QString &gameName);
+    Q_INVOKABLE void fetchGameArtwork(const QString &gameId, const QString &oneTimeApiKey);
+    Q_INVOKABLE void fetchGridArtwork(const QString &gameName, const QString &oneTimeApiKey);
+    Q_INVOKABLE void fetchIconArtwork(const QString &gameName, const QString &oneTimeApiKey);
+    Q_INVOKABLE bool keyringAvailable() const;
+    Q_INVOKABLE bool hasSavedApiKey() const;
     Q_INVOKABLE bool saveSettings(const QVariantMap &settings);
     Q_INVOKABLE void runInstaller(const QString &installerPath, const QString &prefixPath,
                                   const QString &protonVersion);
@@ -89,7 +93,6 @@ public:
 Q_SIGNALS:
     void protonBuildsChanged();
     void defaultProtonChanged();
-    void steamgridApiKeyChanged();
     void defaultLaunchArgsChanged();
     void defaultWrapperCommandChanged();
     void toastMessage(const QString &message);
@@ -105,7 +108,8 @@ Q_SIGNALS:
 private:
     void setSettings(const AppSettings &settings);
     void connectSteamGrid();
-    void fetchArtwork(const QString &gameId, const QString &apiKey, bool icon);
+    QString apiKeyForRequest(const QString &oneTimeApiKey) const;
+    void fetchArtwork(const QString &gameId, const QString &oneTimeApiKey, bool icon);
     Game gameForId(const QString &gameId, QUuid *uuid) const;
 
     GameLibrary m_games;
@@ -113,12 +117,10 @@ private:
     LaunchManager m_launch;
     SettingsStore m_settingsStore;
     SteamGrid m_steamGrid;
-    bool m_apiKeyLoaded = false;
     QMap<QUuid, QString> m_previewRequests;
 
     Q_OBJECT_BINDABLE_PROPERTY(Launcher, QStringList, m_protonBuilds, &Launcher::protonBuildsChanged)
     Q_OBJECT_BINDABLE_PROPERTY(Launcher, QString, m_defaultProton, &Launcher::defaultProtonChanged)
-    Q_OBJECT_BINDABLE_PROPERTY(Launcher, QString, m_steamgridApiKey, &Launcher::steamgridApiKeyChanged)
     Q_OBJECT_BINDABLE_PROPERTY(Launcher, QString, m_defaultLaunchArgs, &Launcher::defaultLaunchArgsChanged)
     Q_OBJECT_BINDABLE_PROPERTY(Launcher, QString, m_defaultWrapperCommand, &Launcher::defaultWrapperCommandChanged)
 };

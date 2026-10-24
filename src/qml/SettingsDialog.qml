@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 
@@ -6,13 +7,16 @@ Kirigami.Dialog {
     id: dialog
     title: "Settings"
     padding: Kirigami.Units.largeSpacing
+    property bool savedApiKeyAvailable: false
+    property string savedKeyMask: "saved-key-mask"
 
-    property bool revealApiKey: false
+    onClosed: apiKeyField.clear()
 
     onOpened: {
         Backend.reloadProtonBuilds();
         defaultProtonCombo.currentIndex = defaultProtonCombo.find(Backend.defaultProton ?? "");
-        apiKeyField.text = Backend.steamgridApiKey ?? "";
+        savedApiKeyAvailable = Backend.hasSavedApiKey();
+        apiKeyField.text = savedApiKeyAvailable ? savedKeyMask : "";
         defaultArgsField.text = Backend.defaultLaunchArgs ?? "";
         defaultWrapperField.text = Backend.defaultWrapperCommand ?? "";
     }
@@ -23,14 +27,15 @@ Kirigami.Dialog {
             icon.name: "document-save"
             onTriggered: {
                 if (Backend.saveSettings({
-                    defaultProton: defaultProtonCombo.currentIndex >= 0
-                        ? defaultProtonCombo.currentText
-                        : (Backend.defaultProton ?? ""),
-                    steamgridApiKey: apiKeyField.text,
+                    defaultProton: defaultProtonCombo.currentIndex >= 0 ? defaultProtonCombo.currentText : (Backend.defaultProton ?? ""),
+                    steamgridApiKey: apiKeyField.text === dialog.savedKeyMask ? "" : apiKeyField.text,
+                    removeSteamgridApiKey: dialog.savedApiKeyAvailable && apiKeyField.text.length === 0,
                     defaultLaunchArgs: defaultArgsField.text,
                     defaultWrapperCommand: defaultWrapperField.text
-                }))
+                })) {
+                    apiKeyField.clear();
                     dialog.close();
+                }
             }
         },
         Kirigami.Action {
@@ -48,22 +53,30 @@ Kirigami.Dialog {
             displayText: currentIndex < 0 ? "None" : currentText
         }
 
+        Kirigami.InlineMessage {
+            Layout.fillWidth: true
+            type: Kirigami.MessageType.Information
+            text: "KWallet is unavailable. Saved API keys require KWallet. Enter a one-time key when fetching artwork."
+            visible: !Backend.keyringAvailable()
+        }
+
+        Kirigami.InlineMessage {
+            Layout.fillWidth: true
+            type: Kirigami.MessageType.Information
+            text: dialog.savedApiKeyAvailable ? "API key saved in KWallet. Leave the dots unchanged to keep it, or clear the field to remove it." : "No API key is saved. Enter one to save it in KWallet."
+            visible: Backend.keyringAvailable()
+        }
+
         QQC2.TextField {
             id: apiKeyField
             Kirigami.FormData.label: "SteamGridDB API key:"
-            placeholderText: "Paste your API key here"
-            echoMode: dialog.revealApiKey ? TextInput.Normal : TextInput.Password
-            rightPadding: revealButton.width + Kirigami.Units.smallSpacing
-
-            QQC2.ToolButton {
-                id: revealButton
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                icon.name: dialog.revealApiKey ? "password-show-off" : "password-show-on"
-                onClicked: dialog.revealApiKey = !dialog.revealApiKey
-                QQC2.ToolTip.text: dialog.revealApiKey ? "Hide API key" : "Show API key"
-                QQC2.ToolTip.visible: hovered
-                QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+            placeholderText: dialog.savedApiKeyAvailable ? "Leave unchanged to keep, clear to remove" : "Enter a key to save"
+            echoMode: TextInput.Password
+            passwordMaskDelay: 0
+            visible: Backend.keyringAvailable()
+            onActiveFocusChanged: {
+                if (activeFocus && text === dialog.savedKeyMask)
+                    selectAll();
             }
         }
 

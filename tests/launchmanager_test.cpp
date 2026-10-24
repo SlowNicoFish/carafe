@@ -1,6 +1,8 @@
 #include "launchmanager.h"
+#include "shellargs.h"
 
 #include <QFile>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -10,9 +12,16 @@ class LaunchManagerTest : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
+    void parsesEmptyQuotedArguments();
     void hostWrapperReceivesUmuCommandAndArguments();
     void failedToStartReportsErrorAndClearsTracking();
+    void stopTracksProcessUntilExit();
+    void terminateAllClearsTrackingForMultipleProcesses();
 };
+
+void LaunchManagerTest::parsesEmptyQuotedArguments() {
+    QCOMPARE(parseShellArgs(u"--title \"\" 'two words'"_s), QStringList({u"--title"_s, u""_s, u"two words"_s}));
+}
 
 void LaunchManagerTest::hostWrapperReceivesUmuCommandAndArguments() {
     QTemporaryDir directory;
@@ -81,6 +90,46 @@ void LaunchManagerTest::failedToStartReportsErrorAndClearsTracking() {
     QVERIFY(!terminalOk);
     QVERIFY(terminalMessage.contains(u"Failed to start"_s));
     QVERIFY(!manager.isRunning(spec.gameUuid));
+}
+
+void LaunchManagerTest::stopTracksProcessUntilExit() {
+    LaunchManager manager;
+    LaunchManager::Spec spec;
+    spec.gameUuid = QUuid::createUuid();
+    spec.wrapperCommand = u"/bin/sh -c 'exec /bin/sleep 30'"_s;
+
+    bool started = false;
+    int terminalCount = 0;
+    QSignalSpy stoppedSpy(&manager, &LaunchManager::processStopped);
+    manager.start(spec, [&started] { started = true; }, [&terminalCount](bool, const QString &) { ++terminalCount; });
+
+    QTRY_VERIFY_WITH_TIMEOUT(started, 3000);
+    manager.stop(spec.gameUuid);
+    QVERIFY(manager.isRunning(spec.gameUuid));
+
+    QTRY_VERIFY_WITH_TIMEOUT(!manager.isRunning(spec.gameUuid), 3000);
+    QCOMPARE(terminalCount, 0);
+    QCOMPARE(stoppedSpy.count(), 1);
+}
+
+void LaunchManagerTest::terminateAllClearsTrackingForMultipleProcesses() {
+    LaunchManager manager;
+    QList<QUuid> gameIds;
+    int startedCount = 0;
+
+    for (int i = 0; i < 2; ++i) {
+        LaunchManager::Spec spec;
+        spec.gameUuid = QUuid::createUuid();
+        spec.wrapperCommand = u"/bin/sh -c 'exec /bin/sleep 30'"_s;
+        gameIds.append(spec.gameUuid);
+        manager.start(spec, [&startedCount] { ++startedCount; }, [](bool, const QString &) {});
+    }
+
+    QTRY_COMPARE_WITH_TIMEOUT(startedCount, 2, 3000);
+    manager.terminateAll();
+
+    for (const QUuid &gameId : gameIds)
+        QVERIFY(!manager.isRunning(gameId));
 }
 
 QTEST_MAIN(LaunchManagerTest)

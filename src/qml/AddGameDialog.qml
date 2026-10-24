@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
-import QtQuick.Dialogs
 import org.kde.kirigami as Kirigami
 
 Kirigami.Dialog {
@@ -9,6 +8,7 @@ Kirigami.Dialog {
     title: "Add Game"
     padding: Kirigami.Units.largeSpacing
     closePolicy: QQC2.Popup.CloseOnEscape
+    width: Kirigami.Units.gridUnit * 35
 
     property var protonBuilds: []
     property bool prefixManuallyEdited: false
@@ -22,22 +22,20 @@ Kirigami.Dialog {
     // Reset fields when the dialog opens
     // Except for the Proton version, which is set to the default if available
     onOpened: {
-        Backend.reloadProtonBuilds()
-        titleField.text = ""
-        exeField.text = ""
-        prefixField.text = ""
-        prefixManuallyEdited = false
-        _fetchingArtwork = false
-        _pendingFetchTitle = ""
-        _previewGridPath = ""
-        _previewIconPath = ""
+        Backend.reloadProtonBuilds();
+        titleField.text = "";
+        exeField.text = "";
+        prefixField.text = "";
+        prefixManuallyEdited = false;
+        _fetchingArtwork = false;
+        _pendingFetchTitle = "";
+        _previewGridPath = "";
+        _previewIconPath = "";
         const defaultProton = Backend.defaultProton ?? "";
-        protonCombo.currentIndex = defaultProton !== ""
-            ? protonCombo.find(defaultProton)
-            : -1;
-        installStatus.text = ""
-        wrapperField.text = ""
-        titleField.forceActiveFocus()
+        protonCombo.currentIndex = defaultProton !== "" ? protonCombo.find(defaultProton) : -1;
+        installStatus.text = "";
+        wrapperField.text = "";
+        titleField.forceActiveFocus();
     }
 
     ColumnLayout {
@@ -63,11 +61,9 @@ Kirigami.Dialog {
                     Layout.fillWidth: true
                     placeholderText: "My Game"
                     onTextChanged: {
-                        validationMessage.visible = false
+                        validationMessage.visible = false;
                         if (!dialog.prefixManuallyEdited) {
-                            prefixField.text = text.trim().length > 0
-                                ? Backend.suggestPrefix(text.trim())
-                                : ""
+                            prefixField.text = text.trim().length > 0 ? Backend.suggestPrefix(text.trim()) : "";
                         }
                     }
                 }
@@ -80,13 +76,7 @@ Kirigami.Dialog {
                     onClicked: {
                         const title = titleField.text.trim();
                         dialog._pendingFetchTitle = title;
-                        dialog._gridArtworkDone = false;
-                        dialog._iconArtworkDone = false;
-                        _previewGridPath = "";
-                        _previewIconPath = "";
-                        _fetchingArtwork = true;
-                        Backend.fetchGridArtwork(title);
-                        Backend.fetchIconArtwork(title);
+                        steamGridKeyDialog.openForRequest();
                     }
                 }
             }
@@ -106,7 +96,14 @@ Kirigami.Dialog {
                 QQC2.Button {
                     text: "Browse…"
                     icon.name: "image-x-generic"
-                    onClicked: gridImageDialog.open()
+                    onClicked: {
+                        const path = Backend.chooseFile("Select grid image", ["Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "All Files (*)"]);
+                        if (path.length === 0)
+                            return;
+                        const imported = Backend.importImage(path, "", "grid");
+                        if (imported.length > 0)
+                            dialog._previewGridPath = imported;
+                    }
                 }
             }
 
@@ -125,7 +122,14 @@ Kirigami.Dialog {
                 QQC2.Button {
                     text: "Browse…"
                     icon.name: "image-x-generic"
-                    onClicked: iconImageDialog.open()
+                    onClicked: {
+                        const path = Backend.chooseFile("Select icon image", ["Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "All Files (*)"]);
+                        if (path.length === 0)
+                            return;
+                        const imported = Backend.importImage(path, "", "icon");
+                        if (imported.length > 0)
+                            dialog._previewIconPath = imported;
+                    }
                 }
             }
 
@@ -141,7 +145,11 @@ Kirigami.Dialog {
                 }
                 QQC2.Button {
                     text: "Browse…"
-                    onClicked: exeDialog.open()
+                    onClicked: {
+                        const path = Backend.chooseFile("Select game executable", ["Executables (*.exe)", "All Files (*)"], prefixField.text);
+                        if (path.length > 0)
+                            exeField.text = path;
+                    }
                 }
             }
 
@@ -157,7 +165,13 @@ Kirigami.Dialog {
                 }
                 QQC2.Button {
                     text: "Browse…"
-                    onClicked: prefixDialog.open()
+                    onClicked: {
+                        const path = Backend.chooseDirectory("Select Wine prefix directory", prefixField.text);
+                        if (path.length > 0) {
+                            prefixField.text = path;
+                            dialog.prefixManuallyEdited = true;
+                        }
+                    }
                 }
             }
 
@@ -170,7 +184,15 @@ Kirigami.Dialog {
                     text: "Run Installer…"
                     icon.name: "media-playback-start"
                     enabled: titleField.text.trim().length > 0 && protonCombo.currentIndex >= 0
-                    onClicked: installerFileDialog.open()
+                    onClicked: {
+                        const path = Backend.chooseFile("Select game installer", ["Installers (*.exe *.msi)", "All Files (*)"]);
+                        if (path.length === 0)
+                            return;
+                        installStatus.text = "Running installer…";
+                        installStatus.color = Kirigami.Theme.textColor;
+                        installBtn.enabled = false;
+                        Backend.runInstaller(path, prefixField.text, protonCombo.currentIndex >= 0 ? protonCombo.currentText : "");
+                    }
                 }
 
                 QQC2.Label {
@@ -203,19 +225,12 @@ Kirigami.Dialog {
             icon.name: "list-add"
             onTriggered: {
                 if (titleField.text.trim() === "" || exeField.text.trim() === "") {
-                    validationMessage.text = "Game name and executable path are required."
-                    validationMessage.visible = true
-                    return
+                    validationMessage.text = "Game name and executable path are required.";
+                    validationMessage.visible = true;
+                    return;
                 }
-                if (Backend.addGame(titleField.text.trim(),
-                                    exeField.text.trim(),
-                                    prefixField.text.trim(),
-                                    protonCombo.currentIndex >= 0 ? protonCombo.currentText : "",
-                                    "",
-                                    dialog._previewGridPath,
-                                    dialog._previewIconPath,
-                                    wrapperField.text.trim()))
-                    dialog.close()
+                if (Backend.addGame(titleField.text.trim(), exeField.text.trim(), prefixField.text.trim(), protonCombo.currentIndex >= 0 ? protonCombo.currentText : "", "", dialog._previewGridPath, dialog._previewIconPath, wrapperField.text.trim()))
+                    dialog.close();
             }
         },
         Kirigami.Action {
@@ -225,61 +240,16 @@ Kirigami.Dialog {
         }
     ]
 
-    function urlToPath(url) {
-        return Backend.urlToLocalFile(url)
-    }
-
-    FileDialog {
-        id: exeDialog
-        title: "Select game executable"
-        nameFilters: ["Executables (*.exe)", "All Files (*)"]
-        onAccepted: exeField.text = dialog.urlToPath(selectedFile)
-    }
-
-    FolderDialog {
-        id: prefixDialog
-        title: "Select Wine prefix directory"
-        onAccepted: {
-            prefixField.text = dialog.urlToPath(selectedFolder)
-            dialog.prefixManuallyEdited = true
-        }
-    }
-
-    FileDialog {
-        id: installerFileDialog
-        title: "Select game installer"
-        nameFilters: ["Installers (*.exe *.msi)", "All Files (*)"]
-        onAccepted: {
-            installStatus.text = "Running installer…"
-            installStatus.color = Kirigami.Theme.textColor
-            installBtn.enabled = false
-            Backend.runInstaller(dialog.urlToPath(selectedFile),
-                                 prefixField.text,
-                                 protonCombo.currentIndex >= 0 ? protonCombo.currentText : "")
-         }
-    }
-
-    FileDialog {
-        id: gridImageDialog
-        title: "Select grid image"
-        nameFilters: ["Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "All Files (*)"]
-        onAccepted: {
-            const path = dialog.urlToPath(selectedFile);
-            const imported = Backend.importImage(path, "", "grid");
-            if (imported.length > 0)
-                dialog._previewGridPath = imported;
-        }
-    }
-
-    FileDialog {
-        id: iconImageDialog
-        title: "Select icon image"
-        nameFilters: ["Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "All Files (*)"]
-        onAccepted: {
-            const path = dialog.urlToPath(selectedFile);
-            const imported = Backend.importImage(path, "", "icon");
-            if (imported.length > 0)
-                dialog._previewIconPath = imported;
+    SteamGridKeyDialog {
+        id: steamGridKeyDialog
+        onKeyAccepted: apiKey => {
+            dialog._gridArtworkDone = false;
+            dialog._iconArtworkDone = false;
+            dialog._previewGridPath = "";
+            dialog._previewIconPath = "";
+            dialog._fetchingArtwork = true;
+            Backend.fetchGridArtwork(dialog._pendingFetchTitle, apiKey);
+            Backend.fetchIconArtwork(dialog._pendingFetchTitle, apiKey);
         }
     }
 
@@ -303,31 +273,27 @@ Kirigami.Dialog {
             if (gameName === dialog._pendingFetchTitle) {
                 dialog._gridArtworkDone = true;
                 dialog._fetchingArtwork = !dialog._gridArtworkDone || !dialog._iconArtworkDone;
-                validationMessage.text = error
-                validationMessage.visible = true
+                validationMessage.text = error;
+                validationMessage.visible = true;
             }
         }
         function onIconPreviewFailed(gameName, error) {
             if (gameName === dialog._pendingFetchTitle) {
                 dialog._iconArtworkDone = true;
                 dialog._fetchingArtwork = !dialog._gridArtworkDone || !dialog._iconArtworkDone;
-                validationMessage.text = error
-                validationMessage.visible = true
+                validationMessage.text = error;
+                validationMessage.visible = true;
             }
         }
         function onInstallerStarted() {
-            installStatus.text = "Running installer…"
-            installStatus.color = Kirigami.Theme.textColor
-            installBtn.enabled = false
+            installStatus.text = "Running installer…";
+            installStatus.color = Kirigami.Theme.textColor;
+            installBtn.enabled = false;
         }
         function onInstallerFinished(success, message) {
-            installBtn.enabled = titleField.text.trim().length > 0 && protonCombo.currentIndex >= 0
-            installStatus.text = message
-            installStatus.color = success
-                ? Kirigami.Theme.positiveTextColor
-                : Kirigami.Theme.negativeTextColor
-            if (success)
-                exeDialog.currentFolder = Backend.localFileToUrl(prefixField.text)
+            installBtn.enabled = titleField.text.trim().length > 0 && protonCombo.currentIndex >= 0;
+            installStatus.text = message;
+            installStatus.color = success ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.negativeTextColor;
         }
     }
 }

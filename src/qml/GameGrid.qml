@@ -9,6 +9,7 @@ Item {
     signal editRequested(string gameId)
     signal deleteRequested(string gameId)
     signal launchRequested(string gameId)
+    signal stopRequested(string gameId)
     signal fetchArtworkRequested(string gameId)
     signal runExeInPrefixRequested(string gameId)
 
@@ -37,17 +38,17 @@ Item {
         keyNavigationEnabled: true
 
         Keys.onReturnPressed: {
-            const card = currentItem as GameCard
+            const card = currentItem as GameCard;
             if (card)
-                root.launchRequested(card.gameId)
+                root.launchRequested(card.gameId);
         }
         Keys.onEnterPressed: {
-            const card = currentItem as GameCard
+            const card = currentItem as GameCard;
             if (card)
-                root.launchRequested(card.gameId)
+                root.launchRequested(card.gameId);
         }
 
-        QQC2.ScrollBar.vertical: QQC2.ScrollBar { }
+        QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
 
         delegate: GameCard {
             width: root.cellW - Kirigami.Units.largeSpacing
@@ -55,7 +56,7 @@ Item {
             gameId: model.gameId
             title: model.title
             iconSource: {
-                const p = model.gridPath
+                const p = model.gridPath;
                 return p ? Backend.localFileToUrl(p) : "qrc:/res/carafe_placeholder.png";
             }
             launchArgs: model.launchArgs
@@ -65,6 +66,7 @@ Item {
             isRunning: model.isRunning
             onSelectRequested: gridView.currentIndex = index
             onLaunchRequested: root.launchRequested(model.gameId)
+            onStopRequested: root.stopRequested(model.gameId)
             onEditRequested: root.editRequested(model.gameId)
             onDeleteRequested: root.deleteRequested(model.gameId)
             onFetchArtworkRequested: root.fetchArtworkRequested(model.gameId)

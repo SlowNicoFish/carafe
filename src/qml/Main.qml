@@ -2,7 +2,6 @@ import QtQuick
 import QtCore
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
-import QtQuick.Dialogs
 import org.kde.kirigami as Kirigami
 import org.kde.kirigami.dialogs as KirigamiDialogs
 
@@ -23,15 +22,11 @@ Kirigami.ApplicationWindow {
         property string viewMode: "grid"
     }
 
+    property string pendingArtworkGameId: ""
+
     function fetchArtwork(gameId) {
-        const apiKey = Backend.steamgridApiKey;
-        if (!apiKey || apiKey.trim() === "") {
-            toastBar.showMessage("Set a SteamGridDB API key in Settings first.", true);
-            return;
-        }
-        Backend.fetchGrid(gameId, apiKey);
-        Backend.fetchIcon(gameId, apiKey);
-        toastBar.showMessage("Fetching artwork…", false);
+        pendingArtworkGameId = gameId;
+        steamGridKeyDialog.openForRequest();
     }
 
     pageStack.initialPage: Kirigami.Page {
@@ -76,10 +71,14 @@ Kirigami.ApplicationWindow {
                     removeGameDialog.open();
                 }
                 onLaunchRequested: gameId => Backend.launchGame(gameId)
+                onStopRequested: gameId => Backend.stopGame(gameId)
                 onFetchArtworkRequested: gameId => window.fetchArtwork(gameId)
                 onRunExeInPrefixRequested: gameId => {
-                    runExeDialog.gameId = gameId;
-                    runExeDialog.open();
+                    const info = Backend.gameById(gameId);
+                    const initialDir = info && info.prefixPath ? info.prefixPath : "";
+                    const path = Backend.chooseFile("Select executable to run in prefix", ["Executables (*.exe *.msi)", "All Files (*)"], initialDir);
+                    if (path.length > 0)
+                        Backend.runExeInPrefix(gameId, path);
                 }
             }
         }
@@ -93,10 +92,14 @@ Kirigami.ApplicationWindow {
                     removeGameDialog.open();
                 }
                 onLaunchRequested: gameId => Backend.launchGame(gameId)
+                onStopRequested: gameId => Backend.stopGame(gameId)
                 onFetchArtworkRequested: gameId => window.fetchArtwork(gameId)
                 onRunExeInPrefixRequested: gameId => {
-                    runExeDialog.gameId = gameId;
-                    runExeDialog.open();
+                    const info = Backend.gameById(gameId);
+                    const initialDir = info && info.prefixPath ? info.prefixPath : "";
+                    const path = Backend.chooseFile("Select executable to run in prefix", ["Executables (*.exe *.msi)", "All Files (*)"], initialDir);
+                    if (path.length > 0)
+                        Backend.runExeInPrefix(gameId, path);
                 }
             }
         }
@@ -114,6 +117,14 @@ Kirigami.ApplicationWindow {
 
     SettingsDialog {
         id: settingsDialog
+    }
+
+    SteamGridKeyDialog {
+        id: steamGridKeyDialog
+        onKeyAccepted: apiKey => {
+            Backend.fetchGameArtwork(window.pendingArtworkGameId, apiKey);
+            toastBar.showMessage("Fetching artwork…", false);
+        }
     }
 
     Kirigami.Dialog {
@@ -175,18 +186,6 @@ Kirigami.ApplicationWindow {
         standardButtons: Kirigami.Dialog.Ok
     }
 
-    FileDialog {
-        id: runExeDialog
-        title: "Select executable to run in prefix"
-        nameFilters: ["Executables (*.exe *.msi)", "All Files (*)"]
-        property string gameId: ""
-
-        onAccepted: {
-            const path = Backend.urlToLocalFile(selectedFile);
-            Backend.runExeInPrefix(runExeDialog.gameId, path);
-        }
-    }
-
     Connections {
         target: Backend
         function onGameLaunchFailed(gameId, reason) {
@@ -220,7 +219,10 @@ Kirigami.ApplicationWindow {
         type: _isError ? Kirigami.MessageType.Error : Kirigami.MessageType.Information
 
         function showMessage(msg, isError) {
-            _queue.push({msg: msg, isError: isError});
+            _queue.push({
+                msg: msg,
+                isError: isError
+            });
             if (!_active)
                 _showNext();
         }

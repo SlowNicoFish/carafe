@@ -1,5 +1,6 @@
 #include "settings.h"
 
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -22,6 +23,22 @@ QString SettingsStore::settingsPath() {
     return dir + u"/settings.json"_s;
 }
 
+static void quarantineSettingsFile(const QString &path) {
+    if (!QFile::exists(path))
+        return;
+
+    const QString timestamp = QDateTime::currentDateTime().toString(u"yyyyMMdd-HHmmss-zzz"_s);
+    QString backup = path + u".corrupt-%1"_s.arg(timestamp);
+    int suffix = 2;
+    while (QFile::exists(backup))
+        backup = path + u".corrupt-%1-%2"_s.arg(timestamp).arg(suffix++);
+
+    if (!QFile::rename(path, backup))
+        qWarning() << "Could not quarantine corrupt settings file:" << path;
+    else
+        qWarning() << "Quarantined corrupt settings file to" << backup;
+}
+
 #ifdef HAVE_KWALLET
 
 static const QString walletFolder() {
@@ -37,9 +54,8 @@ static bool hasWallet() {
 }
 
 static QString readKeyFromWallet(KWallet::Wallet *wallet) {
-    if (!wallet->hasFolder(walletFolder()) && !wallet->createFolder(walletFolder()))
+    if (!wallet->hasFolder(walletFolder()) || !wallet->setFolder(walletFolder()))
         return {};
-    wallet->setFolder(walletFolder());
     QString value;
     if (wallet->readPassword(u"steamgridApiKey"_s, value) != 0)
         return {};
@@ -47,13 +63,32 @@ static QString readKeyFromWallet(KWallet::Wallet *wallet) {
 }
 
 static bool writeKeyToWallet(KWallet::Wallet *wallet, const QString &key) {
+    if (key.isEmpty()) {
+        if (!wallet->hasFolder(walletFolder()))
+            return true;
+        if (!wallet->setFolder(walletFolder()))
+            return false;
+        if (!wallet->hasEntry(u"steamgridApiKey"_s))
+            return true;
+        return wallet->removeEntry(u"steamgridApiKey"_s) == 0;
+    }
+
     if (!wallet->hasFolder(walletFolder()) && !wallet->createFolder(walletFolder()))
         return false;
     if (!wallet->setFolder(walletFolder()))
         return false;
-    if (key.isEmpty())
-        return wallet->removeEntry(u"steamgridApiKey"_s) == 0;
     return wallet->writePassword(u"steamgridApiKey"_s, key) == 0;
+}
+
+static bool saveApiKeyToWallet(const QString &key) {
+    if (!hasWallet())
+        return false;
+    KWallet::Wallet *wallet = openWallet();
+    if (!wallet)
+        return false;
+    const bool saved = writeKeyToWallet(wallet, key);
+    delete wallet;
+    return saved;
 }
 
 #endif
@@ -72,22 +107,44 @@ AppSettings SettingsStore::loadBasic() {
     if (f.open(QIODevice::ReadOnly)) {
         QJsonParseError parseError;
         const QJsonDocument doc = QJsonDocument::fromJson(f.readAll(), &parseError);
-        if (parseError.error != QJsonParseError::NoError)
-            qWarning() << "Failed to parse settings file:" << parseError.errorString();
-        else if (doc.isObject())
-            obj = doc.object();
+        if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+            if (parseError.error != QJsonParseError::NoError)
+                qWarning() << "Failed to parse settings file:" << parseError.errorString();
+            else
+                qWarning() << "Settings file does not contain a JSON object.";
+            f.close();
+            quarantineSettingsFile(settingsPath());
+            return AppSettings::defaults();
+        }
+        obj = doc.object();
+    }
+
+    const bool hasLegacyKey = obj.contains(u"steamgridApiKey"_s);
+    QString legacyKey = obj.take(u"steamgridApiKey"_s).toString();
+    if (hasLegacyKey) {
+        if (!writeSettingsFile(obj)) {
+            qWarning() << "Could not remove the legacy SteamGridDB key from settings; removing the old file.";
+            QFile::remove(settingsPath());
+        }
+#ifdef HAVE_KWALLET
+        if (!legacyKey.isEmpty() && !saveApiKeyToWallet(legacyKey))
+            qWarning() << "Could not migrate the legacy SteamGridDB key to KWallet.";
+#else
+        if (!legacyKey.isEmpty())
+            qWarning() << "Discarding a legacy SteamGridDB key because KWallet support is unavailable.";
+#endif
+        legacyKey.fill(QChar{});
     }
 
     AppSettings s;
     s.defaultProton = obj[u"defaultProton"_s].toString();
     s.defaultLaunchArgs = obj[u"defaultLaunchArgs"_s].toString();
     s.defaultWrapperCommand = obj[u"defaultWrapperCommand"_s].toString();
-    s.steamgridApiKey = obj[u"steamgridApiKey"_s].toString();
 
     return s;
 }
 
-QString SettingsStore::loadApiKey(const QString &jsonFallback) {
+QString SettingsStore::loadApiKey() {
 #ifdef HAVE_KWALLET
     if (hasWallet()) {
         KWallet::Wallet *wallet = openWallet();
@@ -99,7 +156,23 @@ QString SettingsStore::loadApiKey(const QString &jsonFallback) {
         }
     }
 #endif
-    return jsonFallback;
+    return {};
+}
+
+bool SettingsStore::hasApiKey() {
+#ifdef HAVE_KWALLET
+    if (!hasWallet())
+        return false;
+    KWallet::Wallet *wallet = openWallet();
+    if (!wallet)
+        return false;
+    const bool found = wallet->hasFolder(walletFolder()) && wallet->setFolder(walletFolder()) &&
+                       wallet->hasEntry(u"steamgridApiKey"_s);
+    delete wallet;
+    return found;
+#else
+    return false;
+#endif
 }
 
 bool SettingsStore::writeSettingsFile(const QJsonObject &obj) {
@@ -119,28 +192,25 @@ bool SettingsStore::writeSettingsFile(const QJsonObject &obj) {
 
 bool SettingsStore::save(const AppSettings &s) const {
 #ifdef HAVE_KWALLET
-    if (hasWallet()) {
-        if (KWallet::Wallet *wallet = openWallet()) {
-            const bool keySaved = writeKeyToWallet(wallet, s.steamgridApiKey);
-            delete wallet;
-            if (!keySaved)
-                return false;
-
-            QJsonObject obj;
-            obj[u"defaultProton"_s] = s.defaultProton;
-            obj[u"defaultLaunchArgs"_s] = s.defaultLaunchArgs;
-            obj[u"defaultWrapperCommand"_s] = s.defaultWrapperCommand;
-            obj[u"hasSteamgridApiKey"_s] = !s.steamgridApiKey.isEmpty();
-            return writeSettingsFile(obj);
-        }
+    if (!s.steamgridApiKey.isEmpty() || s.removeSteamgridApiKey) {
+        if (!hasWallet())
+            return false;
+        KWallet::Wallet *wallet = openWallet();
+        if (!wallet)
+            return false;
+        const bool keySaved = writeKeyToWallet(wallet, s.removeSteamgridApiKey ? QString{} : s.steamgridApiKey);
+        delete wallet;
+        if (!keySaved)
+            return false;
     }
+#else
+    if (!s.steamgridApiKey.isEmpty() || s.removeSteamgridApiKey)
+        return false;
 #endif
 
-    // No keyring: persist the raw key as the fallback for loadApiKey().
     QJsonObject obj;
     obj[u"defaultProton"_s] = s.defaultProton;
     obj[u"defaultLaunchArgs"_s] = s.defaultLaunchArgs;
     obj[u"defaultWrapperCommand"_s] = s.defaultWrapperCommand;
-    obj[u"steamgridApiKey"_s] = s.steamgridApiKey;
     return writeSettingsFile(obj);
 }

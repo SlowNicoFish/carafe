@@ -4,24 +4,28 @@ Item {
     id: root
 
     property string gameId: ""
+    property bool isRunning: false
 
-    signal launchRequested()
-    signal editRequested()
-    signal deleteRequested()
-    signal fetchArtworkRequested()
-    signal runExeInPrefixRequested()
+    signal launchRequested
+    signal stopRequested
+    signal editRequested
+    signal deleteRequested
+    signal fetchArtworkRequested
+    signal runExeInPrefixRequested
 
     function popup(parentItem, x, y) {
         if (parentItem)
-            contextMenu.popup(parentItem, x, y)
+            contextMenu.popup(parentItem, x, y);
         else
-            contextMenu.popup()
+            contextMenu.popup();
     }
 
     ContextMenu {
         id: contextMenu
         gameId: root.gameId
+        isRunning: root.isRunning
         onLaunchRequested: root.launchRequested()
+        onStopRequested: root.stopRequested()
         onEditRequested: root.editRequested()
         onDeleteRequested: root.deleteRequested()
         onFetchArtworkRequested: root.fetchArtworkRequested()

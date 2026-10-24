@@ -9,6 +9,7 @@ Item {
     signal editRequested(string gameId)
     signal deleteRequested(string gameId)
     signal launchRequested(string gameId)
+    signal stopRequested(string gameId)
     signal fetchArtworkRequested(string gameId)
     signal runExeInPrefixRequested(string gameId)
 
@@ -31,34 +32,35 @@ Item {
         keyNavigationEnabled: true
 
         Keys.onReturnPressed: {
-            const item = currentItem as GameListItem
+            const item = currentItem as GameListItem;
             if (item)
-                root.launchRequested(item.gameId)
+                root.launchRequested(item.gameId);
         }
         Keys.onEnterPressed: {
-            const item = currentItem as GameListItem
+            const item = currentItem as GameListItem;
             if (item)
-                root.launchRequested(item.gameId)
+                root.launchRequested(item.gameId);
         }
 
-        QQC2.ScrollBar.vertical: QQC2.ScrollBar { }
+        QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
 
         delegate: GameListItem {
             width: ListView.view.width
-            gameId:     model.gameId
-            title:      model.title
+            gameId: model.gameId
+            title: model.title
             onSelectRequested: itemIndex => {
-                listView.currentIndex = itemIndex
-                listView.forceActiveFocus()
+                listView.currentIndex = itemIndex;
+                listView.forceActiveFocus();
             }
             iconSource: {
-                const p = model.steamgridIconPath || model.iconPath
-                return p ? Backend.localFileToUrl(p) : ""
+                const p = model.steamgridIconPath || model.iconPath;
+                return p ? Backend.localFileToUrl(p) : "";
             }
-            isRunning:  model.isRunning
-            onLaunchRequested:       root.launchRequested(model.gameId)
-            onEditRequested:         root.editRequested(model.gameId)
-            onDeleteRequested:       root.deleteRequested(model.gameId)
+            isRunning: model.isRunning
+            onLaunchRequested: root.launchRequested(model.gameId)
+            onStopRequested: root.stopRequested(model.gameId)
+            onEditRequested: root.editRequested(model.gameId)
+            onDeleteRequested: root.deleteRequested(model.gameId)
             onFetchArtworkRequested: root.fetchArtworkRequested(model.gameId)
             onRunExeInPrefixRequested: root.runExeInPrefixRequested(model.gameId)
         }

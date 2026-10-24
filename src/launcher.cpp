@@ -2,6 +2,7 @@
 #include "shellargs.h"
 
 #include <QDir>
+#include <QFileDialog>
 #include <QUrl>
 using namespace Qt::Literals::StringLiterals;
 
@@ -13,6 +14,32 @@ QUrl Launcher::localFileToUrl(const QString &path) {
     return QUrl::fromLocalFile(path);
 }
 
+QString Launcher::chooseFile(const QString &title, const QStringList &nameFilters,
+                             const QString &initialDirectory) const {
+    QFileDialog dialog;
+    dialog.setWindowTitle(title);
+    dialog.setAcceptMode(QFileDialog::AcceptOpen);
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    dialog.setNameFilters(nameFilters);
+    if (!initialDirectory.isEmpty() && QDir(initialDirectory).exists())
+        dialog.setDirectory(initialDirectory);
+    if (dialog.exec() != QDialog::Accepted)
+        return {};
+    return dialog.selectedFiles().value(0);
+}
+
+QString Launcher::chooseDirectory(const QString &title, const QString &initialDirectory) const {
+    QFileDialog dialog;
+    dialog.setWindowTitle(title);
+    dialog.setFileMode(QFileDialog::Directory);
+    dialog.setOption(QFileDialog::ShowDirsOnly);
+    if (!initialDirectory.isEmpty() && QDir(initialDirectory).exists())
+        dialog.setDirectory(initialDirectory);
+    if (dialog.exec() != QDialog::Accepted)
+        return {};
+    return dialog.selectedFiles().value(0);
+}
+
 Launcher::Launcher(QObject *parent)
     : QObject(parent)
     , m_games(this)
@@ -20,6 +47,8 @@ Launcher::Launcher(QObject *parent)
     , m_steamGrid(this) {
     setSettings(m_settingsStore.loadBasic());
     connectSteamGrid();
+    connect(&m_launch, &LaunchManager::processStopped, this,
+            [this](const QUuid &uuid) { m_games.model()->setRunning(uuid, false); });
 }
 
 Launcher::~Launcher() = default;
@@ -83,15 +112,6 @@ QString Launcher::defaultProton() const {
     return m_defaultProton;
 }
 
-QString Launcher::steamgridApiKey() {
-    // Deferred so a slow or missing keyring cannot delay startup.
-    if (!m_apiKeyLoaded) {
-        m_apiKeyLoaded = true;
-        m_steamgridApiKey = SettingsStore::loadApiKey(m_steamgridApiKey);
-    }
-    return m_steamgridApiKey;
-}
-
 QString Launcher::defaultLaunchArgs() const {
     return m_defaultLaunchArgs;
 }
@@ -103,7 +123,6 @@ QString Launcher::defaultWrapperCommand() const {
 void Launcher::setSettings(const AppSettings &settings) {
     // Assignments emit the matching NOTIFY signals only on actual changes.
     m_defaultProton = settings.defaultProton;
-    m_steamgridApiKey = settings.steamgridApiKey;
     m_defaultLaunchArgs = settings.defaultLaunchArgs;
     m_defaultWrapperCommand = settings.defaultWrapperCommand;
 }
@@ -262,6 +281,15 @@ bool Launcher::launchGame(const QString &gameId) {
     return true;
 }
 
+bool Launcher::stopGame(const QString &gameId) {
+    const QUuid uuid(gameId);
+    if (uuid.isNull() || !m_launch.isRunning(uuid))
+        return false;
+
+    m_launch.stop(uuid);
+    return true;
+}
+
 Game Launcher::gameForId(const QString &gameId, QUuid *uuid) const {
     *uuid = QUuid(gameId);
     if (uuid->isNull())
@@ -269,9 +297,24 @@ Game Launcher::gameForId(const QString &gameId, QUuid *uuid) const {
     return m_games.model()->gameById(*uuid);
 }
 
-void Launcher::fetchArtwork(const QString &gameId, const QString &apiKey, bool icon) {
-    if (apiKey.trimmed().isEmpty())
+QString Launcher::apiKeyForRequest(const QString &oneTimeApiKey) const {
+    return oneTimeApiKey.trimmed().isEmpty() ? SettingsStore::loadApiKey() : oneTimeApiKey.trimmed();
+}
+
+bool Launcher::keyringAvailable() const {
+    return SettingsStore::keyringAvailable();
+}
+
+bool Launcher::hasSavedApiKey() const {
+    return SettingsStore::hasApiKey();
+}
+
+void Launcher::fetchArtwork(const QString &gameId, const QString &oneTimeApiKey, bool icon) {
+    const QString apiKey = apiKeyForRequest(oneTimeApiKey);
+    if (apiKey.isEmpty()) {
+        Q_EMIT toastMessage(u"No API key was provided and no key is available in KWallet."_s);
         return;
+    }
 
     QUuid uuid;
     const Game game = gameForId(gameId, &uuid);
@@ -287,24 +330,41 @@ void Launcher::fetchIcon(const QString &gameId, const QString &apiKey) {
     fetchArtwork(gameId, apiKey, true);
 }
 
-void Launcher::fetchGridArtwork(const QString &gameName) {
-    if (steamgridApiKey().isEmpty()) {
-        Q_EMIT toastMessage(u"Set a SteamGridDB API key in Settings first."_s);
+void Launcher::fetchGameArtwork(const QString &gameId, const QString &oneTimeApiKey) {
+    const QString apiKey = apiKeyForRequest(oneTimeApiKey);
+    if (apiKey.isEmpty()) {
+        Q_EMIT toastMessage(u"No API key was provided and no key is available in KWallet."_s);
         return;
     }
-    const QUuid id = QUuid::createUuid();
-    m_previewRequests.insert(id, gameName);
-    m_steamGrid.fetchGrid(gameName, id, steamgridApiKey());
+
+    QUuid uuid;
+    const Game game = gameForId(gameId, &uuid);
+    if (!game.isValid())
+        return;
+    m_steamGrid.fetchGrid(game.title, uuid, apiKey);
+    m_steamGrid.fetchIcon(game.title, uuid, apiKey);
 }
 
-void Launcher::fetchIconArtwork(const QString &gameName) {
-    if (steamgridApiKey().isEmpty()) {
-        Q_EMIT toastMessage(u"Set a SteamGridDB API key in Settings first."_s);
-        return;
-    }
+void Launcher::fetchGridArtwork(const QString &gameName, const QString &oneTimeApiKey) {
     const QUuid id = QUuid::createUuid();
     m_previewRequests.insert(id, gameName);
-    m_steamGrid.fetchIcon(gameName, id, steamgridApiKey());
+    const QString apiKey = apiKeyForRequest(oneTimeApiKey);
+    if (apiKey.isEmpty()) {
+        Q_EMIT m_steamGrid.gridError(id, u"No API key was provided and no key is available in KWallet."_s);
+        return;
+    }
+    m_steamGrid.fetchGrid(gameName, id, apiKey);
+}
+
+void Launcher::fetchIconArtwork(const QString &gameName, const QString &oneTimeApiKey) {
+    const QUuid id = QUuid::createUuid();
+    m_previewRequests.insert(id, gameName);
+    const QString apiKey = apiKeyForRequest(oneTimeApiKey);
+    if (apiKey.isEmpty()) {
+        Q_EMIT m_steamGrid.iconError(id, u"No API key was provided and no key is available in KWallet."_s);
+        return;
+    }
+    m_steamGrid.fetchIcon(gameName, id, apiKey);
 }
 
 void Launcher::runInstaller(const QString &installerPath, const QString &prefixPath, const QString &protonVersion) {
@@ -391,15 +451,23 @@ bool Launcher::saveSettings(const QVariantMap &settings) {
     AppSettings s;
     s.defaultProton = settings.value(u"defaultProton"_s).toString();
     s.steamgridApiKey = settings.value(u"steamgridApiKey"_s).toString();
+    s.removeSteamgridApiKey = settings.value(u"removeSteamgridApiKey"_s).toBool();
     s.defaultLaunchArgs = settings.value(u"defaultLaunchArgs"_s).toString();
     s.defaultWrapperCommand = settings.value(u"defaultWrapperCommand"_s).toString();
 
     if (!m_settingsStore.save(s)) {
-        Q_EMIT toastMessage(u"Could not save settings."_s);
+        const QString message = !s.steamgridApiKey.isEmpty() && !keyringAvailable()
+                                    ? u"KWallet is unavailable. Saved API keys require KWallet."_s
+                                    : u"Could not save settings."_s;
+        Q_EMIT toastMessage(message);
         return false;
     }
 
     setSettings(s);
     reloadProtonBuilds();
+    const QString message = !s.steamgridApiKey.isEmpty() ? u"API key saved in KWallet."_s
+                            : s.removeSteamgridApiKey    ? u"Saved API key removed."_s
+                                                         : u"Settings saved."_s;
+    Q_EMIT toastMessage(message);
     return true;
 }
